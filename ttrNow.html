@@ -160,6 +160,8 @@ body.reading #year,body.reading #yearSub{opacity:0}
   transition:opacity .3s,transform .3s var(--ease),background .3s,border-color .3s}
 .row.hito .node{width:13px;height:13px;margin-left:-6.5px;top:11px;border-color:var(--brass);background:var(--brass);
   box-shadow:0 0 0 4px rgba(198,161,91,.14),0 0 18px rgba(198,161,91,.5)}
+/* Nada de ensanchar el hito: cruzaba la línea central y tapaba la hora.
+   El sitio para el título sale de que el texto rodee la miniatura. */
 .row.efem .node{border-color:rgba(233,229,221,.26);background:transparent;width:8px;height:8px;margin-left:-4px;top:14px}
 /* muesca: el momento que cruza la línea de lectura se enciende un instante */
 .row.at .node{transform:scale(1.8);background:var(--brass);border-color:var(--brass);
@@ -187,26 +189,33 @@ body.reading #year,body.reading #yearSub{opacity:0}
 .row.hito .card{border-color:rgba(198,161,91,.3);background:linear-gradient(180deg,rgba(38,33,26,.9),rgba(20,22,27,.9))}
 .row.efem .card{background:none;border-style:dashed;border-color:rgba(233,229,221,.13);opacity:.62;box-shadow:none}
 .row.efem .card:hover{opacity:.9}
-.chead{display:flex;gap:9px;align-items:flex-start}
+/* La miniatura flota y el texto la rodea: en flex se comía un cuarto del
+   ancho de la tarjeta y a un título de dos palabras no le quedaba sitio. */
+.chead{display:flow-root}
 /* Con el momento abierto el título se queda clavado bajo la barra y el resto
    pasa por debajo: si no, al leer una nota larga pierdes de vista qué estás
    leyendo. */
 .card.open .chead{position:sticky;top:calc(var(--barh) + 6px);z-index:6;
   margin:-13px -14px 10px;padding:12px 14px 9px;border-radius:12px 12px 0 0;
   background:linear-gradient(180deg,rgba(34,41,53,.995) 68%,rgba(31,38,49,.97))}
-.cthumb{flex:none;width:44px;height:44px;border-radius:8px;overflow:hidden;background:rgba(233,229,221,.05);
-  position:relative;transition:width .3s var(--ease),height .3s var(--ease)}
+.cthumb{float:left;width:44px;height:44px;margin:1px 9px 3px 0;border-radius:8px;overflow:hidden;
+  background:rgba(233,229,221,.05);position:relative}
 .cthumb img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .45s}
 .cthumb img.on{opacity:1}
 .cthumb .cnt{position:absolute;right:2px;bottom:1px;font-size:9px;color:#fff;background:rgba(0,0,0,.55);
   border-radius:4px;padding:0 3px;letter-spacing:.04em}
-.cmain{min-width:0;flex:1}
-.ctitle{margin:0;font-size:14.5px;font-weight:500;letter-spacing:.005em;line-height:1.25;
-  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.row.hito .ctitle{font-family:var(--display);font-size:19px;font-weight:400;letter-spacing:.01em;color:#F3EFE7}
+.cmain{min-width:0}
+/* Bloque normal y no -webkit-box: una caja de línea no rodea a un flotante,
+   y era justo lo que hacía falta para que el texto use el ancho completo
+   por debajo de la miniatura. Se corta por alto, sin puntos suspensivos. */
+.ctitle{margin:0;font-size:14.5px;font-weight:500;letter-spacing:.005em;line-height:1.28;
+  display:block;overflow:hidden;max-height:5.1em;overflow-wrap:anywhere}
+.row.hito .ctitle{font-family:var(--display);font-size:19px;font-weight:400;letter-spacing:.005em;
+  line-height:1.18;color:#F3EFE7;max-height:4.7em}
+.card.open .ctitle{max-height:none}
 .row.efem .ctitle{font-size:13px;color:var(--dim)}
-.cnote{margin:2px 0 0;font-size:12.5px;color:var(--dim);line-height:1.35;
-  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
+.cnote{margin:3px 0 0;font-size:12.5px;color:var(--dim);line-height:1.4;
+  display:block;overflow:hidden;max-height:2.8em;overflow-wrap:anywhere}
 .card.open .cnote{display:none}
 .cmeta{display:flex;flex-wrap:nowrap;overflow:hidden;gap:7px;align-items:center;
   margin-top:5px;font-size:10.5px;color:var(--faint);white-space:nowrap;
@@ -214,7 +223,7 @@ body.reading #year,body.reading #yearSub{opacity:0}
   mask-image:linear-gradient(90deg,#000 82%,transparent 100%)}
 .cmeta .mi{display:inline-flex;align-items:center;gap:3px;flex:none}
 /* la X viaja dentro de la cabecera, así se queda fija con el título */
-.cx{display:none;flex:none;width:34px;height:34px;place-items:center;margin:-4px -6px 0 2px;
+.cx{display:none;float:right;width:34px;height:34px;place-items:center;margin:-4px -6px 0 6px;
   border-radius:50%;color:var(--dim);font-size:20px;line-height:1}
 .card.open .cx{display:grid}
 .cx:hover{color:var(--ink);background:rgba(233,229,221,.07)}
@@ -340,9 +349,27 @@ body.reading #year,body.reading #yearSub{opacity:0}
 .thumbs img{width:100%;height:100%;object-fit:cover}
 .thumbs button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;
   background:rgba(0,0,0,.66);color:#fff;font-size:13px;display:grid;place-items:center}
-.aud{display:flex;align-items:center;gap:8px;margin:6px 0}
+.aud{display:flex;align-items:center;gap:8px;margin:6px 0;padding:4px 6px;border-radius:10px}
 .aud audio{flex:1;min-width:0;height:32px;filter:invert(.92) hue-rotate(180deg) contrast(.9)}
 .adur{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.minidel{flex:none;font-size:12px;color:var(--dim)}
+.minidel:hover{color:#D98C7A}
+.aud.nueva{animation:reciennacida 1.8s var(--ease)}
+@keyframes reciennacida{0%{background:rgba(198,161,91,.26)}100%{background:transparent}}
+#audioWrap label{display:block;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--faint);margin:10px 0 2px}
+/* barra de grabación: mientras graba no hay duda de que está grabando */
+#recPanel{margin:10px 0 2px}
+.recbar{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:12px;
+  border:1px solid rgba(224,138,122,.55);background:rgba(224,138,122,.09)}
+.recdot{width:9px;height:9px;border-radius:50%;background:#E08A7A;flex:none;animation:latido 1.1s infinite}
+@keyframes latido{50%{opacity:.2;transform:scale(.75)}}
+.rectime{flex:none;min-width:38px;font-size:14px;color:#F0CFC6;font-variant-numeric:tabular-nums}
+.recwave{flex:1;min-width:50px;height:26px;display:block}
+.recstop{flex:none;background:#E08A7A;color:#2A100B;border-radius:99px;padding:7px 15px;font-size:13px;font-weight:500}
+.recdrop{flex:none;font-size:12px;color:var(--dim)}
+.recdrop:hover{color:var(--ink)}
+.tool:disabled{opacity:.45}
 .save{width:100%;margin-top:8px;background:var(--brass);color:#14100A;border-radius:11px;padding:13px;
   font-size:15px;font-weight:500;letter-spacing:.02em}
 .save:disabled{opacity:.4}
@@ -374,10 +401,10 @@ body.reading #year,body.reading #yearSub{opacity:0}
 #drop.on{display:grid}
 
 @media (max-width:560px){
-  :root{--gap:30px}
-  #timeline{padding-left:10px;padding-right:10px}
+  :root{--gap:26px}
+  #timeline{padding-left:9px;padding-right:9px}
   .ctitle{font-size:13.5px}
-  .row.hito .ctitle{font-size:17px}
+  .row.hito .ctitle{font-size:17.5px}
   .cnote{font-size:12px}
   .cthumb{width:40px;height:40px}
   .card{padding:8px 10px}
@@ -829,11 +856,13 @@ function download(blob, name){
  * ------------------------------------------------------------------ */
 /* Cada estación es, antes que un color, una cantidad de luz: el invierno
    cerrado y lunar, el verano abierto y soleado. El tinte solo matiza. */
+/* Amplitud subida un 20% sobre la media de cada valor: el salto entre
+   estaciones se notaba poco al recorrer la línea. */
 const SEASONS=[
-  {k:'invierno', c: 20, tint:[104,134,168], sky:['#080C12','#06080C','#040507'], glow:.13, col:.10, vig:1.00},
-  {k:'primavera',c:125, tint:[124,154,118], sky:['#131810','#0D110C','#080B08'], glow:.21, col:.13, vig:.86},
-  {k:'verano',   c:218, tint:[198,174,124], sky:['#2B2619','#1A1710','#0E0C08'], glow:.40, col:.20, vig:.56},
-  {k:'otono',    c:309, tint:[168,116,66],  sky:['#1A130C','#100C08','#080605'], glow:.27, col:.15, vig:.80}
+  {k:'invierno', c: 20, tint:[99,135,176],  sky:['#050A12','#04070C','#030407'], glow:.106, col:.091, vig:1.00},
+  {k:'primavera',c:125, tint:[121,157,113], sky:['#121810','#0D110C','#080C08'], glow:.201, col:.127, vig:.871},
+  {k:'verano',   c:218, tint:[200,172,114], sky:['#2F291A','#1C1911','#0F0D08'], glow:.429, col:.211, vig:.511},
+  {k:'otono',    c:309, tint:[176,114,54],  sky:['#1A120B','#100B07','#080605'], glow:.274, col:.151, vig:.799}
 ];
 const hex2rgb = h => [parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];
 const rgb2hex = a => '#'+a.map(v=>pad(Math.max(0,Math.min(255,Math.round(v))).toString(16))).join('');
@@ -1084,11 +1113,12 @@ function makeRow(e, idx){
   const g=glyphOf(m);
 
   card.innerHTML =
-    '<div class="chead">'+thumb+'<div class="cmain">'+
+    '<div class="chead">'+thumb+
+    '<button class="cx" type="button" aria-label="Cerrar este momento">&times;</button>'+
+    '<div class="cmain">'+
       '<h3 class="ctitle">'+(g?gl(g):'')+esc(title)+'</h3>'+noteLine+
       (meta.length?'<div class="cmeta">'+meta.join('')+'</div>':'')+
     '</div>'+
-    '<button class="cx" type="button" aria-label="Cerrar este momento">&times;</button>'+
     '</div>'+
     '<div class="cdetail"><div></div></div>';
 
@@ -1899,11 +1929,11 @@ function openEditor(moment, isNew){
   const m=JSON.parse(JSON.stringify(moment));
   m.tags=m.tags||[]; m.peopleIds=m.peopleIds||[]; m.photos=m.photos||[]; m.audio=m.audio||[]; m.fields=m.fields||{};
   const pendingMedia={photos:[], audio:[]};   // media nueva, se borra si cancelas
-  let saved=false;
+  let saved=false, pararVozAlCerrar=null;
   /* si cierras sin guardar, la media que acabas de adjuntar no se queda de okupa */
   const onClose=async ()=>{
+    if(pararVozAlCerrar) pararVozAlCerrar();
     if(saved) return;
-    if(recorder && recorder.state==='recording'){ try{ recorder.stop(); }catch(e){} }
     const stored=MOMENTS.find(x=>x.id===m.id);
     const keep=new Set();
     if(stored){ (stored.photos||[]).forEach(p=>{keep.add(p.id); keep.add(p.thumbId);}); (stored.audio||[]).forEach(a=>keep.add(a.id)); }
@@ -1944,6 +1974,7 @@ function openEditor(moment, isNew){
       '<div class="f" id="g-tags" hidden><label>Etiquetas</label><div class="chips" id="tagChips"></div>'+
         '<input type="text" id="e-tag" placeholder="Añadir etiqueta y pulsar Intro" autocomplete="off"></div>'+
       '<div class="thumbs" id="photoWrap"></div>'+
+      '<div id="recPanel" hidden></div>'+
       '<div id="audioWrap"></div>'+
       '<button class="save" id="e-save">Guardar</button>'+
       (isNew?'':'<button class="ghostbtn danger" id="e-del">Borrar este momento</button>');
@@ -2119,60 +2150,130 @@ function openEditor(moment, isNew){
       }
     }));
 
-    /* audio */
-    function drawAudio(){
-      const wrap=$('#audioWrap',body); wrap.innerHTML='';
-      m.audio.forEach(async au=>{
-        const div=document.createElement('div'); div.className='aud';
-        const a=document.createElement('audio'); a.controls=true; a.preload='metadata';
+    /* ---- notas de voz ----
+       Antes grabar y parar eran el mismo botón: no veías si estaba grabando
+       ni dónde acababa la nota. Ahora "Voz" solo empieza, y mientras grabas
+       aparece una barra con el tiempo corriendo, una onda que se mueve con
+       tu voz y dos acciones distintas. Al terminar, la nota aparece en su
+       lista, se resalta y se sube a la vista. */
+    function drawAudio(destacar){
+      const wrap=$('#audioWrap',body);
+      wrap.innerHTML = m.audio.length ? '<label>Notas de voz</label>' : '';
+      let nueva=null;
+      m.audio.forEach(au=>{
+        const div=document.createElement('div');
+        div.className='aud'+(destacar===au.id?' nueva':'');
+        if(destacar===au.id) nueva=div;
+        const a=document.createElement('audio');
+        a.controls=true; a.preload='metadata';
         arreglarDuracion(a);
-        const u=await mediaURL(au.id); if(u) a.src=u;
-        if(au.dur){ const d=document.createElement('span'); d.className='adur'; d.textContent=fmtDur(au.dur); div.appendChild(a); div.appendChild(d); }
+        mediaURL(au.id).then(u=>{ if(u) a.src=u; });
+        div.appendChild(a);
+        if(au.dur){ const d=document.createElement('span'); d.className='adur'; d.textContent=fmtDur(au.dur); div.appendChild(d); }
         const del=document.createElement('button'); del.type='button'; del.textContent='Quitar';
-        del.style.cssText='font-size:12px;color:var(--dim)';
+        del.className='minidel';
         del.addEventListener('click',()=>{ m.audio=m.audio.filter(x=>x.id!==au.id); pendingMedia.audio.push(au); drawAudio(); });
-        if(!div.contains(a)) div.appendChild(a);
-        div.appendChild(del); wrap.appendChild(div);
+        div.appendChild(del);
+        wrap.appendChild(div);
       });
+      if(nueva) setTimeout(()=>nueva.scrollIntoView({block:'center',behavior:'smooth'}), 80);
     }
     drawAudio();
-    const recBtn=$('#t-rec',body);
-    recBtn.addEventListener('click',async ()=>{
-      if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
+
+    const recBtn=$('#t-rec',body), recPanel=$('#recPanel',body);
+    let recStream=null, recCtx=null, recRaf=null, recDiscard=false;
+
+    /* la onda es la prueba visible de que te está oyendo */
+    function pintarOnda(analizador, lienzo){
+      const cx=lienzo.getContext('2d');
+      const dpr=Math.min(2, window.devicePixelRatio||1);
+      const w=Math.max(60, lienzo.clientWidth), h=26;
+      lienzo.width=w*dpr; lienzo.height=h*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
+      const datos=new Uint8Array(analizador.frequencyBinCount);
+      const barras=16, hist=new Array(barras).fill(0);
+      const paso=()=>{
+        recRaf=requestAnimationFrame(paso);
+        analizador.getByteTimeDomainData(datos);
+        let pico=0;
+        for(let i=0;i<datos.length;i++){ const v=Math.abs(datos[i]-128)/128; if(v>pico) pico=v; }
+        hist.push(Math.min(1, pico*2.4)); hist.shift();
+        cx.clearRect(0,0,w,h);
+        const bw=w/barras;
+        for(let i=0;i<barras;i++){
+          const a=Math.max(.09, hist[i]), bh=Math.max(2, a*h);
+          cx.fillStyle='rgba(224,138,122,'+(.32+a*.68).toFixed(3)+')';
+          cx.fillRect(i*bw+bw*.22, (h-bh)/2, bw*.56, bh);
+        }
+      };
+      paso();
+    }
+    function pararTodoDeVoz(){
+      clearInterval(recTimer); recTimer=null;
+      if(recRaf) cancelAnimationFrame(recRaf); recRaf=null;
+      if(recCtx){ try{ recCtx.close(); }catch(e){} recCtx=null; }
+      if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
+      recPanel.hidden=true; recPanel.innerHTML='';
+      recBtn.classList.remove('rec'); recBtn.disabled=false;
+    }
+    async function empezarVoz(){
+      if(recorder && recorder.state==='recording') return;
       try{
-        const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true}});
-        const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t))||'';
-        recorder=new MediaRecorder(stream, mime?{mimeType:mime, audioBitsPerSecond:48000}:{});
-        recChunks=[]; recStart=Date.now();
-        recorder.ondataavailable=e=>{ if(e.data.size) recChunks.push(e.data); };
-        recorder.onstop=async ()=>{
-          clearInterval(recTimer);
-          stream.getTracks().forEach(t=>t.stop());
-          recBtn.classList.remove('rec'); $('span',recBtn).textContent='Voz';
-          const blob=new Blob(recChunks,{type:recorder.mimeType||'audio/webm'});
-          const seg=(Date.now()-recStart)/1000;
-          /* un toque accidental dejaba una nota de voz de cero segundos que no
-             suena y no se puede escuchar: mejor no guardarla y decirlo */
-          if(seg<0.8 || blob.size<800){
-            toast('Muy corto, no lo guardo');
-          } else {
-            const au=await saveAudioBlob(blob, Math.round(seg));
-            m.audio.push(au); pendingMedia.audio.push(au); drawAudio();
-          }
-          recorder=null;
-        };
-        recorder.start();
-        recBtn.classList.add('rec');
-        recTimer=setInterval(()=>{
-          const s=Math.round((Date.now()-recStart)/1000);
-          $('span',recBtn).textContent='Parar '+pad(Math.floor(s/60))+':'+pad(s%60);
-        },250);
-      }catch(err){ toast('No hay micrófono disponible'); }
-    });
+        recStream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true}});
+      }catch(err){ toast('No puedo usar el micrófono'); return; }
+      const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac']
+        .find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t))||'';
+      try{
+        recorder=new MediaRecorder(recStream, mime?{mimeType:mime, audioBitsPerSecond:48000}:{});
+      }catch(err){ toast('Este navegador no sabe grabar audio'); pararTodoDeVoz(); return; }
+      recChunks=[]; recStart=Date.now(); recDiscard=false;
+      recorder.ondataavailable=e=>{ if(e.data.size) recChunks.push(e.data); };
+      recorder.onstop=async ()=>{
+        const seg=(Date.now()-recStart)/1000;
+        const blob=new Blob(recChunks,{type:(recorder&&recorder.mimeType)||'audio/webm'});
+        const descartar=recDiscard;
+        recorder=null;
+        pararTodoDeVoz();
+        if(descartar){ toast('Nota descartada'); return; }
+        /* un toque accidental dejaba una nota de cero segundos que ni suena */
+        if(seg<0.8 || blob.size<800){ toast('Muy corto, no lo guardo'); return; }
+        const au=await saveAudioBlob(blob, Math.round(seg));
+        m.audio.push(au); pendingMedia.audio.push(au);
+        drawAudio(au.id);
+        toast('Nota de voz de '+fmtDur(Math.round(seg))+' añadida');
+      };
+      recorder.start();
+
+      recPanel.hidden=false;
+      recPanel.innerHTML='<div class="recbar" role="status" aria-live="polite">'+
+        '<span class="recdot" aria-hidden="true"></span>'+
+        '<span class="rectime">0:00</span>'+
+        '<canvas class="recwave" aria-hidden="true"></canvas>'+
+        '<button type="button" class="recstop">Parar</button>'+
+        '<button type="button" class="recdrop">Descartar</button></div>';
+      recBtn.classList.add('rec'); recBtn.disabled=true;
+      $('.recstop',recPanel).addEventListener('click',()=>{ recDiscard=false; if(recorder) recorder.stop(); });
+      $('.recdrop',recPanel).addEventListener('click',()=>{ recDiscard=true; if(recorder) recorder.stop(); });
+      try{
+        const AC=window.AudioContext||window.webkitAudioContext;
+        recCtx=new AC();
+        const fuente=recCtx.createMediaStreamSource(recStream);
+        const an=recCtx.createAnalyser(); an.fftSize=256; an.smoothingTimeConstant=.5;
+        fuente.connect(an);
+        pintarOnda(an, $('.recwave',recPanel));
+      }catch(e){}
+      const reloj=$('.rectime',recPanel);
+      recTimer=setInterval(()=>{
+        reloj.textContent=fmtDur((Date.now()-recStart)/1000);
+      },200);
+      setTimeout(()=>recPanel.scrollIntoView({block:'center',behavior:'smooth'}), 60);
+    }
+    recBtn.addEventListener('click', empezarVoz);
+    pararVozAlCerrar=()=>{ recDiscard=true; if(recorder&&recorder.state==='recording'){ try{ recorder.stop(); }catch(e){} } else pararTodoDeVoz(); };
 
     /* guardar */
     $('#e-save',body).addEventListener('click',async ()=>{
-      if(recorder && recorder.state==='recording'){ recorder.stop(); await new Promise(r=>setTimeout(r,400)); }
+      /* si estabas grabando al dar a guardar, la nota se queda, no se pierde */
+      if(recorder && recorder.state==='recording'){ recDiscard=false; recorder.stop(); await new Promise(r=>setTimeout(r,500)); }
       m.title=title.value.trim(); m.note=note.value.trim();
       const d=dt.value? new Date(dt.value) : new Date();
       if(isNaN(d)){ toast('Esa fecha no vale'); return; }
