@@ -18,6 +18,9 @@
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 html,body{margin:0;padding:0;min-height:100%}
+/* detente suave: se sienten los momentos pasar, como el selector de la alarma */
+html{scroll-snap-type:y proximity;scroll-padding-bottom:10%}
+.row{scroll-snap-align:center}
 :root{
   --bg:#0B0D10;
   --surface:#1B212A;
@@ -28,6 +31,8 @@ html,body{margin:0;padding:0;min-height:100%}
   --brass:#C6A15B;
   --hair:rgba(233,229,221,.09);
   --tint:96,126,158;
+  --skyTop:#0E1216; --skyMid:#0B0D10; --skyBot:#07080B;
+  --glow:.22; --col:.13; --vig:1;
   --display:"Didot","Bodoni 72","Bodoni MT","Hoefler Text","Playfair Display",ui-serif,Georgia,"Times New Roman",serif;
   --text:"Avenir Next","Avenir","Segoe UI Variable Text",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --gap:46px;
@@ -46,19 +51,25 @@ button{background:none;border:0;padding:0;cursor:pointer}
 :focus-visible{outline:2px solid var(--brass);outline-offset:3px;border-radius:6px}
 ::selection{background:rgba(198,161,91,.28)}
 
-/* ---------- fondo ---------- */
+/* ---------- fondo: la estación se nota sobre todo en la LUZ ---------- */
 #tintl{position:fixed;inset:-2px;z-index:0;pointer-events:none;
   background:
-    radial-gradient(62% 40% at 50% 4%, rgba(var(--tint),.22), transparent 68%),
-    radial-gradient(22% 110% at 50% 52%, rgba(var(--tint),.13), transparent 70%),
-    linear-gradient(180deg,#0E1216 0%, var(--bg) 42%, #07080B 100%);
+    radial-gradient(58% 42% at 50% 2%, rgba(var(--tint),var(--glow)), transparent 70%),
+    radial-gradient(20% 108% at 50% 52%, rgba(var(--tint),var(--col)), transparent 72%),
+    linear-gradient(180deg, var(--skyTop) 0%, var(--skyMid) 46%, var(--skyBot) 100%);
 }
 #sky{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;display:block}
-#vig{position:fixed;inset:0;z-index:2;pointer-events:none;
+#vig{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:var(--vig);
   background:
-    radial-gradient(ellipse 78% 66% at 50% 44%, rgba(0,0,0,0) 0%, rgba(0,0,0,.3) 66%, rgba(0,0,0,.72) 100%),
-    linear-gradient(90deg, rgba(0,0,0,.45), transparent 26%, transparent 74%, rgba(0,0,0,.45));
+    radial-gradient(ellipse 78% 66% at 50% 44%, rgba(0,0,0,0) 0%, rgba(0,0,0,.34) 66%, rgba(0,0,0,.8) 100%),
+    linear-gradient(90deg, rgba(0,0,0,.5), transparent 26%, transparent 74%, rgba(0,0,0,.5));
 }
+/* la muesca donde se lee la línea: destella cuando un momento la cruza */
+#readline{position:fixed;z-index:3;pointer-events:none;left:50%;top:45%;
+  width:24px;height:1px;margin-left:-12px;background:rgba(233,229,221,.13);
+  transition:width .5s var(--ease),background .5s,box-shadow .5s}
+#readline.on{width:46px;margin-left:-23px;background:rgba(198,161,91,.62);
+  box-shadow:0 0 12px rgba(198,161,91,.5);transition:width .09s,background .09s,box-shadow .09s}
 
 /* ---------- año ---------- */
 #year{
@@ -77,8 +88,12 @@ button{background:none;border:0;padding:0;cursor:pointer}
   position:fixed;z-index:3;pointer-events:none;right:max(16px, calc(50% - 398px));
   top:calc(var(--sat) + 58px + clamp(58px,17.5vw,130px) * .99);
   font-size:10px;letter-spacing:.34em;text-transform:uppercase;
-  color:rgba(233,229,221,.20);
+  color:rgba(233,229,221,.34);
+  transition:opacity .3s var(--ease);
 }
+/* leyendo un momento no se navega: el año y la estación se retiran */
+body.reading #year,body.reading #yearSub{opacity:0}
+#year{transition:opacity .3s var(--ease)}
 
 /* ---------- barra ---------- */
 #bar{position:fixed;top:0;left:0;right:0;z-index:20;padding:calc(var(--sat) + 8px) 12px 10px;
@@ -103,6 +118,15 @@ button{background:none;border:0;padding:0;cursor:pointer}
 .sug-i:hover,.sug-i[aria-selected="true"]{background:rgba(233,229,221,.06)}
 .sug-i em{font-style:normal;color:var(--faint);font-size:11.5px;margin-left:auto;white-space:nowrap}
 [hidden]{display:none !important}
+#glyphs{position:absolute;width:0;height:0;overflow:hidden}
+.gl{width:13px;height:13px;flex:none;stroke:currentColor;fill:none;
+  stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.ctitle .gl{width:14px;height:14px;margin-right:6px;vertical-align:-2px;color:var(--brass);opacity:.9}
+.row.hito .ctitle .gl{width:15px;height:15px;vertical-align:-2px;margin-right:7px}
+.row.efem .ctitle .gl{color:var(--dim);opacity:.75}
+.dkind{display:inline-flex;align-items:center;gap:6px;color:var(--brass);
+  font-size:9.5px;letter-spacing:.2em;text-transform:uppercase}
+.dkind .gl{width:14px;height:14px}
 #notice{max-width:720px;margin:8px auto 0;display:flex;align-items:center;gap:10px;
   font-size:12px;color:var(--dim);border:1px dashed rgba(233,229,221,.14);border-radius:10px;padding:7px 10px}
 #notice b{color:var(--ink);font-weight:500}
@@ -117,7 +141,10 @@ button{background:none;border:0;padding:0;cursor:pointer}
 #rows{position:relative}
 
 .msep{position:relative;display:flex;justify-content:center;margin:26px 0 16px;pointer-events:none}
-.msep span{background:#0B0D10;padding:0 12px;font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--faint)}
+/* el separador tapa la línea, así que tiene que ser del color del cielo de
+   esa estación: si no, en verano se ven chips negros sobre fondo dorado */
+.msep span{padding:2px 20px;font-size:9.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--faint);
+  background:radial-gradient(closest-side ellipse at 50% 50%, var(--skyMid) 45%, rgba(0,0,0,0) 100%)}
 .msep.year span{color:var(--brass);letter-spacing:.3em}
 .msep.gone{display:none}
 
@@ -128,11 +155,18 @@ button{background:none;border:0;padding:0;cursor:pointer}
 .row.l>.card{grid-column:1;justify-self:stretch}
 .row.r>.card{grid-column:2;justify-self:stretch}
 .node{position:absolute;left:50%;top:13px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;
-  background:#0B0D10;border:1.5px solid rgba(233,229,221,.45);z-index:2;
+  background:var(--skyMid);border:1.5px solid rgba(233,229,221,.45);z-index:2;
   transition:opacity .3s,transform .3s var(--ease),background .3s,border-color .3s}
 .row.hito .node{width:13px;height:13px;margin-left:-6.5px;top:11px;border-color:var(--brass);background:var(--brass);
   box-shadow:0 0 0 4px rgba(198,161,91,.14),0 0 18px rgba(198,161,91,.5)}
-.row.efem .node{border-style:dashed;border-color:rgba(233,229,221,.3);width:7px;height:7px;margin-left:-3.5px;top:15px}
+.row.efem .node{border-color:rgba(233,229,221,.26);background:transparent;width:8px;height:8px;margin-left:-4px;top:14px}
+/* muesca: el momento que cruza la línea de lectura se enciende un instante */
+.row.at .node{transform:scale(1.8);background:var(--brass);border-color:var(--brass);
+  box-shadow:0 0 10px rgba(198,161,91,.55);
+  transition:transform .09s,background .09s,border-color .09s,box-shadow .09s}
+.row.hito.at .node{transform:scale(1.3)}
+.row.at .tstamp{color:var(--ink);transition:color .09s}
+.row.at .tick{background:rgba(198,161,91,.45);transition:background .09s}
 .tstamp{position:absolute;top:11px;font-size:10.5px;letter-spacing:.06em;color:var(--faint);
   font-variant-numeric:tabular-nums;transition:opacity .3s;white-space:nowrap}
 .row.l .tstamp{left:calc(50% + 14px)}
@@ -172,8 +206,13 @@ button{background:none;border:0;padding:0;cursor:pointer}
   -webkit-mask-image:linear-gradient(90deg,#000 82%,transparent 100%);
   mask-image:linear-gradient(90deg,#000 82%,transparent 100%)}
 .cmeta .mi{display:inline-flex;align-items:center;gap:3px;flex:none}
+.cx{position:absolute;top:5px;right:5px;width:32px;height:32px;display:none;
+  place-items:center;border-radius:50%;color:var(--dim);font-size:19px;line-height:1;z-index:4}
+.card.open .cx{display:grid}
+.cx:hover{color:var(--ink);background:rgba(233,229,221,.07)}
+.card.open .ctitle{padding-right:34px}
 .card.open .cmeta{flex-wrap:wrap;overflow:visible;-webkit-mask-image:none;mask-image:none}
-.cmeta svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.cmeta .gl{width:11px;height:11px}
 .kind{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);opacity:.85}
 
 .cdetail{display:grid;grid-template-rows:0fr;transition:grid-template-rows .42s var(--ease)}
@@ -186,6 +225,8 @@ button{background:none;border:0;padding:0;cursor:pointer}
 .card.open{border-color:rgba(233,229,221,.18);box-shadow:0 24px 60px -24px rgba(0,0,0,1);padding:13px 14px}
 .card.open .cthumb{display:none}
 .dt{padding-top:11px;margin-top:11px;border-top:1px solid var(--hair)}
+.dhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-bottom:9px}
+.dwhen{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
 .dt .dnote{font-size:14px;line-height:1.55;white-space:pre-wrap;color:#DDD8CF;margin:0 0 10px}
 .dt .full{display:block;width:100%;max-height:64svh;object-fit:contain;object-position:left top;
   border-radius:10px;margin-bottom:8px;background:rgba(233,229,221,.04);cursor:zoom-in}
@@ -193,7 +234,7 @@ button{background:none;border:0;padding:0;cursor:pointer}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 9px;border-radius:99px;
   border:1px solid var(--hair);color:var(--dim);background:rgba(233,229,221,.03);line-height:1.5}
-.chip svg{width:11px;height:11px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.chip .gl{width:11px;height:11px}
 .chip.p{border-color:rgba(198,161,91,.28);color:#D9C79B}
 .chip.t{color:var(--dim)}
 .fields{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.5px;margin:6px 0 2px}
@@ -264,6 +305,11 @@ button{background:none;border:0;padding:0;cursor:pointer}
 .typebar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
 .typebar button{border:1px solid var(--hair);border-radius:99px;padding:6px 13px;font-size:12px;color:var(--dim)}
 .typebar button[aria-pressed=true]{border-color:rgba(198,161,91,.5);color:var(--brass);background:rgba(198,161,91,.08)}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hair);
+  border-radius:10px;padding:7px 11px;font-size:12.5px;color:var(--dim)}
+.presets button[aria-pressed=true]{border-color:rgba(198,161,91,.5);color:var(--brass);background:rgba(198,161,91,.08)}
+.presets .gl{width:14px;height:14px}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
 .tool{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hair);border-radius:10px;
   padding:8px 12px;font-size:12.5px;color:var(--dim)}
@@ -321,11 +367,37 @@ button{background:none;border:0;padding:0;cursor:pointer}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}
   #sky{display:none}
+  html{scroll-snap-type:none}
+  .row.at .node{transform:none;box-shadow:none}
+  #readline{display:none}
 }
 </style>
 </head>
 <body>
+<!-- Glifos: trazo único sobre rejilla de 16, sin relleno. Grabados, no iconitos. -->
+<svg id="glyphs" aria-hidden="true" focusable="false"><defs>
+<symbol id="g-vino" viewBox="0 0 16 16"><path d="M4.6 2.6h6.8l-.8 4.1a2.7 2.7 0 0 1-5.2 0z"/><path d="M8 9.5v3.4"/><path d="M5.7 13.4h4.6"/></symbol>
+<symbol id="g-sitio" viewBox="0 0 16 16"><path d="M8 1.5l1 5.5 5.5 1-5.5 1-1 5.5-1-5.5-5.5-1 5.5-1z"/></symbol>
+<symbol id="g-libro" viewBox="0 0 16 16"><path d="M2.6 3.6L8 5.1l5.4-1.5v7.8L8 12.9 2.6 11.4z"/><path d="M8 5.1v7.8"/></symbol>
+<symbol id="g-comida" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.9"/><circle cx="8" cy="8" r="2.9"/></symbol>
+<symbol id="g-gimnasio" viewBox="0 0 16 16"><circle cx="3.7" cy="8" r="2.1"/><circle cx="12.3" cy="8" r="2.1"/><path d="M5.8 8h4.4"/></symbol>
+<symbol id="g-deporte" viewBox="0 0 16 16"><rect x="2.2" y="3.4" width="11.6" height="9.2" rx="1"/><path d="M8 3.4v9.2"/><circle cx="8" cy="8" r="1.7"/></symbol>
+<symbol id="g-concierto" viewBox="0 0 16 16"><path d="M5.6 2.2v5a2.4 2.4 0 0 0 4.8 0v-5"/><path d="M8 9.6v4.2"/></symbol>
+<symbol id="g-pelicula" viewBox="0 0 16 16"><rect x="2.4" y="3.4" width="11.2" height="9.2" rx="1"/><path d="M2.4 6.3h2.6M2.4 9.7h2.6M11 6.3h2.6M11 9.7h2.6"/></symbol>
+<symbol id="g-viaje" viewBox="0 0 16 16"><path d="M2.7 11.7C4.5 6 9.8 3.5 13.3 4.7"/><circle cx="2.7" cy="11.7" r="1.1"/><circle cx="13.3" cy="4.7" r="1.1"/></symbol>
+<symbol id="g-receta" viewBox="0 0 16 16"><path d="M3.1 6.4h9.8v3a3.1 3.1 0 0 1-3.1 3.1H6.2A3.1 3.1 0 0 1 3.1 9.4z"/><path d="M1.9 6.4h12.2"/><path d="M6.6 2.6c-.6.8-.6 1.4 0 2.2M9.4 2.6c-.6.8-.6 1.4 0 2.2"/></symbol>
+<symbol id="g-ruta" viewBox="0 0 16 16"><path d="M3 13.3c2.6 0 2.2-3.7 4.6-3.7s4.6 2.7 4.6-1S8 6.1 8 3.4"/><circle cx="8" cy="2.6" r=".9"/></symbol>
+<symbol id="g-compra" viewBox="0 0 16 16"><path d="M8 2.4l5.4 2.7v5.8L8 13.6 2.6 10.9V5.1z"/><path d="M2.6 5.1L8 7.8l5.4-2.7M8 7.8v5.8"/></symbol>
+<symbol id="g-salud" viewBox="0 0 16 16"><path d="M1.8 8.4h3l1.5-3.7 2.4 6.5 1.3-2.8h4.2"/></symbol>
+<symbol id="g-hito" viewBox="0 0 16 16"><path d="M8 2.2l3.3 5.8-3.3 5.8-3.3-5.8z"/></symbol>
+<symbol id="g-efemeride" viewBox="0 0 16 16"><path d="M13.2 8a5.2 5.2 0 1 1-1.9-4"/><path d="M13.4 1.9v2.6h-2.6"/></symbol>
+<symbol id="g-mic" viewBox="0 0 16 16"><rect x="6.2" y="2.4" width="3.6" height="7" rx="1.8"/><path d="M3.8 8.2a4.2 4.2 0 0 0 8.4 0M8 12.4v2.2"/></symbol>
+<symbol id="g-pin" viewBox="0 0 16 16"><path d="M8 14.4s5-4.2 5-7.6a5 5 0 1 0-10 0c0 3.4 5 7.6 5 7.6z"/><circle cx="8" cy="6.6" r="1.7"/></symbol>
+<symbol id="g-ppl" viewBox="0 0 16 16"><circle cx="6.2" cy="5.4" r="2.3"/><path d="M2 13.4a4.2 4.2 0 0 1 8.4 0M11 3.6a2.2 2.2 0 0 1 0 3.6M12.6 13.4a4 4 0 0 0-1.4-2.9"/></symbol>
+<symbol id="g-tag" viewBox="0 0 16 16"><path d="M2.4 7.6V2.6h5l6.6 6.6-5 5z"/><circle cx="5" cy="5.2" r=".9"/></symbol>
+</defs></svg>
 <div id="tintl"></div>
+<div id="readline" aria-hidden="true"></div>
 <canvas id="sky" aria-hidden="true"></canvas>
 <div id="vig" aria-hidden="true"></div>
 <div id="year" aria-hidden="true"></div>
@@ -465,35 +537,35 @@ const TYPES = {
 };
 
 const PRESETS = {
-  vino:      {label:'Vino', icon:'🍷', fields:[
+  vino:      {g:'vino', label:'Vino', fields:[
                 {k:'bodega',l:'Bodega'},{k:'anada',l:'Añada',type:'number'},{k:'uva',l:'Uva'},
                 {k:'donde',l:'Dónde'},{k:'conquien',l:'Con quién'},{k:'nota',l:'Nota',type:'rating'}]},
-  sitio:     {label:'Sitio', icon:'📍', fields:[
+  sitio:     {g:'sitio', label:'Sitio', fields:[
                 {k:'que',l:'Qué es'},{k:'ciudad',l:'Ciudad'},{k:'conquien',l:'Con quién'},
                 {k:'pedimos',l:'Qué pedimos'},{k:'nota',l:'Nota',type:'rating'}]},
-  libro:     {label:'Libro', icon:'📖', fields:[
+  libro:     {g:'libro', label:'Libro', fields:[
                 {k:'autor',l:'Autor'},{k:'estado',l:'Estado'},{k:'frase',l:'Frase que me quedo'},{k:'nota',l:'Nota',type:'rating'}]},
-  comida:    {label:'Comida', icon:'🍽️', fields:[
+  comida:    {g:'comida', label:'Comida', fields:[
                 {k:'plato',l:'Plato'},{k:'donde',l:'Dónde'},{k:'conquien',l:'Con quién'},{k:'nota',l:'Nota',type:'rating'}]},
-  gimnasio:  {label:'Gimnasio', icon:'🏋️', fields:[
+  gimnasio:  {g:'gimnasio', label:'Gimnasio', fields:[
                 {k:'sesion',l:'Sesión'},{k:'ejercicios',l:'Ejercicios'},{k:'peso',l:'Peso / series'},
                 {k:'duracion',l:'Duración'},{k:'sensacion',l:'Sensación',type:'rating'}]},
-  deporte:   {label:'Evento deportivo', icon:'⚽', fields:[
+  deporte:   {g:'deporte', label:'Evento deportivo', fields:[
                 {k:'competicion',l:'Competición'},{k:'equipos',l:'Equipos'},{k:'resultado',l:'Resultado'},
                 {k:'donde',l:'Dónde'},{k:'conquien',l:'Con quién'}]},
-  concierto: {label:'Concierto', icon:'🎤', fields:[
+  concierto: {g:'concierto', label:'Concierto', fields:[
                 {k:'artista',l:'Artista'},{k:'sala',l:'Sala'},{k:'conquien',l:'Con quién'},{k:'nota',l:'Nota',type:'rating'}]},
-  pelicula:  {label:'Película o serie', icon:'🎬', fields:[
+  pelicula:  {g:'pelicula', label:'Película o serie', fields:[
                 {k:'director',l:'Dirección'},{k:'donde',l:'Dónde'},{k:'conquien',l:'Con quién'},{k:'nota',l:'Nota',type:'rating'}]},
-  viaje:     {label:'Viaje', icon:'✈️', fields:[
+  viaje:     {g:'viaje', label:'Viaje', fields:[
                 {k:'destino',l:'Destino'},{k:'dias',l:'Días'},{k:'conquien',l:'Con quién'},{k:'quedarme',l:'Lo que me quedo'}]},
-  receta:    {label:'Receta', icon:'🥘', fields:[
+  receta:    {g:'receta', label:'Receta', fields:[
                 {k:'ingredientes',l:'Ingredientes'},{k:'punto',l:'El truco'},{k:'nota',l:'Nota',type:'rating'}]},
-  ruta:      {label:'Ruta o paseo', icon:'🥾', fields:[
+  ruta:      {g:'ruta', label:'Ruta o paseo', fields:[
                 {k:'donde',l:'Dónde'},{k:'km',l:'Km'},{k:'conquien',l:'Con quién'},{k:'nota',l:'Nota',type:'rating'}]},
-  compra:    {label:'Cosa que compré', icon:'📦', fields:[
+  compra:    {g:'compra', label:'Cosa que compré', fields:[
                 {k:'donde',l:'Dónde'},{k:'precio',l:'Precio'},{k:'porque',l:'Por qué'},{k:'nota',l:'Nota',type:'rating'}]},
-  salud:     {label:'Salud', icon:'🩺', fields:[
+  salud:     {g:'salud', label:'Salud', fields:[
                 {k:'quien',l:'Quién / dónde'},{k:'motivo',l:'Motivo'},{k:'resultado',l:'Resultado'},{k:'proxima',l:'Próxima vez'}]}
 };
 
@@ -723,12 +795,17 @@ function download(blob, name){
 /* ------------------------------------------------------------------ *
  * Estaciones: mezcla continua según la fecha que estás mirando
  * ------------------------------------------------------------------ */
+/* Cada estación es, antes que un color, una cantidad de luz: el invierno
+   cerrado y lunar, el verano abierto y soleado. El tinte solo matiza. */
 const SEASONS=[
-  {k:'invierno', c: 20, tint:[96,126,158], theme:'#0A0D11'},
-  {k:'primavera',c:125, tint:[112,142,110],theme:'#0B0E0D'},
-  {k:'verano',   c:218, tint:[168,146,104],theme:'#100E0B'},
-  {k:'otono',    c:309, tint:[146,101,58], theme:'#0F0C09'}
+  {k:'invierno', c: 20, tint:[104,134,168], sky:['#080C12','#06080C','#040507'], glow:.13, col:.10, vig:1.00},
+  {k:'primavera',c:125, tint:[124,154,118], sky:['#131810','#0D110C','#080B08'], glow:.21, col:.13, vig:.86},
+  {k:'verano',   c:218, tint:[198,174,124], sky:['#2B2619','#1A1710','#0E0C08'], glow:.40, col:.20, vig:.56},
+  {k:'otono',    c:309, tint:[168,116,66],  sky:['#1A130C','#100C08','#080605'], glow:.27, col:.15, vig:.80}
 ];
+const hex2rgb = h => [parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];
+const rgb2hex = a => '#'+a.map(v=>pad(Math.max(0,Math.min(255,Math.round(v))).toString(16))).join('');
+for(const s of SEASONS) s.skyRGB=s.sky.map(hex2rgb);
 const SEASON_NAME={invierno:'invierno',primavera:'primavera',verano:'verano',otono:'otoño'};
 
 function seasonWeights(date){
@@ -745,15 +822,25 @@ function seasonWeights(date){
 let wTarget=seasonWeights(new Date()), wCur=wTarget.slice();
 
 function applyTint(){
-  let r=0,g=0,b=0, th=[0,0,0];
+  const tint=[0,0,0], sky=[[0,0,0],[0,0,0],[0,0,0]];
+  let glow=0, col=0, vig=0;
   for(let i=0;i<4;i++){
-    const t=SEASONS[i].tint, w=wCur[i];
-    r+=t[0]*w; g+=t[1]*w; b+=t[2]*w;
-    const h=SEASONS[i].theme;
-    th[0]+=parseInt(h.substr(1,2),16)*w; th[1]+=parseInt(h.substr(3,2),16)*w; th[2]+=parseInt(h.substr(5,2),16)*w;
+    const s=SEASONS[i], w=wCur[i];
+    for(let c=0;c<3;c++){
+      tint[c]+=s.tint[c]*w;
+      for(let j=0;j<3;j++) sky[j][c]+=s.skyRGB[j][c]*w;
+    }
+    glow+=s.glow*w; col+=s.col*w; vig+=s.vig*w;
   }
-  document.documentElement.style.setProperty('--tint', Math.round(r)+','+Math.round(g)+','+Math.round(b));
-  $('#metaTheme').setAttribute('content','#'+th.map(v=>pad(Math.round(v).toString(16))).join(''));
+  const st=document.documentElement.style;
+  st.setProperty('--tint', tint.map(Math.round).join(','));
+  st.setProperty('--skyTop', rgb2hex(sky[0]));
+  st.setProperty('--skyMid', rgb2hex(sky[1]));
+  st.setProperty('--skyBot', rgb2hex(sky[2]));
+  st.setProperty('--glow', glow.toFixed(3));
+  st.setProperty('--col', col.toFixed(3));
+  st.setProperty('--vig', vig.toFixed(3));
+  $('#metaTheme').setAttribute('content', rgb2hex(sky[1]));
 }
 function seasonOf(date){
   const w=seasonWeights(date);
@@ -786,10 +873,10 @@ function spawn(p, fromTop){
   p.r=Math.random()*Math.PI*2;
   p.a=.25+Math.random()*.55;
   switch(p.s){
-    case 0: p.sz=1+Math.random()*2.2;  p.vy=.16+Math.random()*.26; p.vx=0; p.sw=.5+Math.random()*.9; p.vr=0; break;
+    case 0: p.sz=1.5+Math.random()*2.8; p.vy=.13+Math.random()*.24; p.vx=0; p.sw=.7+Math.random()*1.1; p.vr=0; p.a=.4+Math.random()*.5; break;
     case 1: p.sz=2.4+Math.random()*3;  p.vy=.24+Math.random()*.3;  p.vx=.14+Math.random()*.26; p.sw=.7+Math.random(); p.vr=.006+Math.random()*.012; break;
-    case 2: p.sz=.8+Math.random()*1.5; p.vy=-.03-Math.random()*.06;p.vx=(Math.random()-.5)*.06; p.sw=.25; p.vr=0; p.a=.12+Math.random()*.3; break;
-    case 3: p.sz=3.2+Math.random()*4;  p.vy=.32+Math.random()*.42; p.vx=(Math.random()-.5)*.3; p.sw=1.1+Math.random()*1.2; p.vr=.012+Math.random()*.026; break;
+    case 2: p.sz=.7+Math.random()*1.3; p.vy=-.03-Math.random()*.05;p.vx=(Math.random()-.5)*.05; p.sw=.2; p.vr=0; p.a=.10+Math.random()*.22; break;
+    case 3: p.sz=3.6+Math.random()*4.4; p.vy=.3+Math.random()*.44; p.vx=(Math.random()-.5)*.34; p.sw=1.2+Math.random()*1.3; p.vr=.014+Math.random()*.028; p.a=.35+Math.random()*.45; break;
   }
   p.ph=Math.random()*Math.PI*2;
 }
@@ -803,9 +890,15 @@ function drawPart(p, alpha){
   sx.save();
   sx.translate(p.x,p.y);
   if(p.s===0){
-    sx.globalAlpha=alpha*.9;
-    sx.fillStyle='#EAF1F8';
-    sx.beginPath(); sx.arc(0,0,p.sz,0,6.2832); sx.fill();
+    /* copo: núcleo nítido y un halo lunar alrededor, para que no se confunda
+       nunca con la calima del verano */
+    const g=sx.createRadialGradient(0,0,0,0,0,p.sz*2.6);
+    g.addColorStop(0,'rgba(240,247,255,'+(alpha*.5)+')');
+    g.addColorStop(1,'rgba(240,247,255,0)');
+    sx.globalAlpha=1; sx.fillStyle=g;
+    sx.beginPath(); sx.arc(0,0,p.sz*2.6,0,6.2832); sx.fill();
+    sx.globalAlpha=alpha; sx.fillStyle='#F4F8FF';
+    sx.beginPath(); sx.arc(0,0,p.sz*.62,0,6.2832); sx.fill();
   } else if(p.s===1){
     sx.rotate(p.r); sx.globalAlpha=alpha*.75;
     sx.fillStyle='rgba(214,198,196,1)';
@@ -911,13 +1004,20 @@ function buildEntries(){
 function personName(id){ const p=PMAP.get(id); return p?p.name:''; }
 function placeName(id){ const p=LMAP.get(id); return p?p.name:''; }
 
-const IC={
-  mic:'<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
-  pin:'<svg viewBox="0 0 24 24"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
-  ppl:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0M16.5 5.5a3 3 0 0 1 0 5M18 20a5.6 5.6 0 0 0-2-4"/></svg>',
-  tag:'<svg viewBox="0 0 24 24"><path d="M3 11V4h7l10 10-7 7z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>',
-  cam:'<svg viewBox="0 0 24 24"><path d="M3 8h4l1.5-2h7L17 8h4v11H3z"/><circle cx="12" cy="13" r="3.4"/></svg>'
-};
+/* referencias al juego de glifos incrustado */
+const gl = (name,cls) => '<svg class="gl'+(cls?' '+cls:'')+'" aria-hidden="true"><use href="#g-'+name+'"/></svg>';
+const IC={ mic:gl('mic'), pin:gl('pin'), ppl:gl('ppl'), tag:gl('tag') };
+/* el glifo que identifica el momento de un vistazo */
+function glyphOf(m){
+  if(m.type==='hito') return 'hito';
+  if(m.type==='efemeride') return 'efemeride';
+  if(m.type==='ficha' && m.preset && PRESETS[m.preset]) return PRESETS[m.preset].g;
+  return null;
+}
+function kindOf(m){
+  if(m.type==='ficha' && m.preset && PRESETS[m.preset]) return PRESETS[m.preset].label;
+  return TYPES[m.type] ? TYPES[m.type].label : m.type;
+}
 
 function makeRow(e, idx){
   const m=e.m;
@@ -941,8 +1041,6 @@ function makeRow(e, idx){
       (nPhotos>1?'<span class="cnt">'+nPhotos+'</span>':'')+'</div>' : '';
 
   const meta=[];
-  if(m.type==='ficha' && m.preset && PRESETS[m.preset]) meta.push('<span class="kind">'+esc(PRESETS[m.preset].label)+'</span>');
-  if(m.type==='hito') meta.push('<span class="kind">Hito</span>');
   if(m.type==='efemeride') meta.push('<span class="kind">Cada año</span>');
   if((m.audio||[]).length) meta.push('<span class="mi">'+IC.mic+'</span>');
   if(m.placeId) meta.push('<span class="mi">'+IC.pin+esc(placeName(m.placeId))+'</span>');
@@ -951,18 +1049,24 @@ function makeRow(e, idx){
 
   const title = m.title || (m.note ? m.note.split('\n')[0].slice(0,60) : 'Sin título');
   const noteLine = m.note && m.title ? '<p class="cnote">'+esc(m.note.replace(/\s+/g,' ').slice(0,140))+'</p>' : '';
+  const g=glyphOf(m);
 
   card.innerHTML =
     '<div class="chead">'+thumb+'<div class="cmain">'+
-      '<h3 class="ctitle">'+esc(title)+'</h3>'+noteLine+
+      '<h3 class="ctitle">'+(g?gl(g):'')+esc(title)+'</h3>'+noteLine+
       (meta.length?'<div class="cmeta">'+meta.join('')+'</div>':'')+
     '</div></div>'+
-    '<div class="cdetail"><div></div></div>';
+    '<div class="cdetail"><div></div></div>'+
+    '<button class="cx" type="button" aria-label="Cerrar este momento">&times;</button>';
 
-  card.setAttribute('aria-label', (m.type==='hito'?'Hito. ':'')+title+'. '+fmtFechaLarga(e.d));
+  card.setAttribute('aria-label', kindOf(m)+'. '+title+'. '+fmtFechaLarga(e.d));
   row.appendChild(node); row.appendChild(tick); row.appendChild(st); row.appendChild(card);
 
-  card.addEventListener('click', ev=>{ if(ev.target.closest('.dt')) return; toggleRow(row, e); });
+  card.addEventListener('click', ev=>{
+    if(ev.target.closest('.cx')){ ev.stopPropagation(); toggleRow(row, e, true); return; }
+    if(ev.target.closest('.dt')) return;
+    toggleRow(row, e);
+  });
   card.addEventListener('keydown', ev=>{
     if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); toggleRow(row,e); }
     if(ev.key==='Escape' && card.classList.contains('open')){ toggleRow(row,e,true); }
@@ -1037,12 +1141,38 @@ const bandIO=new IntersectionObserver(entries=>{
   updateHead();
 },{rootMargin:'-35% 0px -45% 0px'});
 
+/* La muesca. Una banda finísima justo en la línea de lectura: cada momento
+   que la cruza enciende su nodo y da un golpecito. Es lo que hace que se
+   sientan los momentos pasar en vez de deslizarse por un tobogán. */
+const readEl=$('#readline');
+let lastBuzz=0, offTimer=null, userTapped=false;
+/* vibrar antes del primer toque lo bloquea el navegador y ensucia la consola */
+window.addEventListener('pointerdown',()=>{ userTapped=true; },{once:true,passive:true});
+window.addEventListener('touchstart',()=>{ userTapped=true; },{once:true,passive:true});
+function detent(row){
+  row.classList.add('at');
+  clearTimeout(row._at);
+  row._at=setTimeout(()=>row.classList.remove('at'), 260);
+  readEl.classList.add('on');
+  clearTimeout(offTimer);
+  offTimer=setTimeout(()=>readEl.classList.remove('on'), 150);
+  const now=performance.now();
+  if(userTapped && now-lastBuzz>70 && navigator.vibrate){ lastBuzz=now; try{ navigator.vibrate(5); }catch(e){} }
+}
+const tickIO=new IntersectionObserver(entries=>{
+  if(reduced) return;
+  for(const en of entries) if(en.isIntersecting) detent(en.target);
+},{rootMargin:'-44.4% 0px -54.6% 0px'});
+
 function observeRow(row){
   bandIO.observe(row);
+  tickIO.observe(row);
   $$('img[data-mid]',row).forEach(i=>thumbIO.observe(i));
 }
 function unobserveRow(row){
   bandIO.unobserve(row);
+  tickIO.unobserve(row);
+  clearTimeout(row._at);
   $$('img[data-mid]',row).forEach(i=>{ thumbIO.unobserve(i); if(i._loaded){ releaseURL(i.dataset.mid); i._loaded=false; } });
 }
 
@@ -1079,6 +1209,7 @@ async function toggleRow(row, e, forceClose){
     card.setAttribute('aria-expanded','false');
     releaseDetail(card);
     openRow=null;
+    document.body.classList.remove('reading');
     return;
   }
   if(openRow && openRow!==row) toggleRow(openRow, rowIndex.get(openRow.dataset.key).e, true);
@@ -1088,6 +1219,7 @@ async function toggleRow(row, e, forceClose){
   card.classList.add('open'); row.classList.add('open');
   card.setAttribute('aria-expanded','true');
   openRow=row;
+  document.body.classList.add('reading');
   setTimeout(()=>{
     const r=card.getBoundingClientRect();
     if(r.top<90 || r.bottom>window.innerHeight-20)
@@ -1107,10 +1239,11 @@ function releaseDetail(card){
 async function buildDetail(e, row){
   const m=e.m, wrap=document.createElement('div');
   wrap.className='dt';
-  const bits=[];
-  bits.push('<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:8px">'+
-    esc(fmtFechaLarga(e.d))+' · '+esc(fmtHora(e.d))+
-    (m.type==='efemeride' && e.n>0 ? ' · hace '+e.n+(e.n===1?' año':' años') : '')+'</div>');
+  const bits=[], g=glyphOf(m);
+  bits.push('<div class="dhead">'+
+    (g?'<span class="dkind">'+gl(g)+esc(kindOf(m))+'</span>':'')+
+    '<span class="dwhen">'+esc(fmtFechaLarga(e.d))+' · '+esc(fmtHora(e.d))+
+    (m.type==='efemeride' && e.n>0 ? ' · hace '+e.n+(e.n===1?' año':' años') : '')+'</span></div>');
   if(m.note) bits.push('<p class="dnote">'+esc(m.note)+'</p>');
 
   for(const ph of (m.photos||[])) bits.push('<img class="full" data-full="'+esc(ph.id)+'" alt="'+esc(ph.alt||('Foto de '+(m.title||'un momento')))+'">');
@@ -1144,7 +1277,6 @@ async function buildDetail(e, row){
       '<button data-act="edit">Editar</button>'+
       (m.type!=='efemeride'?'<button data-act="dup">Repetir hoy</button>':'')+
       '<button data-act="del" class="del">Borrar</button>'+
-      '<span style="margin-left:auto;font-size:10.5px;color:var(--faint)">'+esc(TYPES[m.type]?TYPES[m.type].label:m.type)+'</span>'+
     '</div>');
   wrap.innerHTML=bits.join('');
 
@@ -1209,10 +1341,37 @@ async function ensureRendered(idx){
   let guard=0;
   while(drawn<=idx && guard++<200) if(!renderMore(CHUNK*2)) break;
 }
+/* El detente pelea con los saltos programados: si dejo el snap activo, el
+   navegador vuelve a enganchar en cuanto cambia el layout y te devuelve a
+   otro momento. Lo suelto mientras el salto está en el aire. */
+let snapTimer=null;
+function withoutSnap(fn){
+  const el=document.documentElement;
+  el.style.scrollSnapType='none';
+  fn();
+  clearTimeout(snapTimer);
+  const restore=()=>{ el.style.scrollSnapType=''; };
+  snapTimer=setTimeout(restore, 1100);
+  if('onscrollend' in window) window.addEventListener('scrollend', ()=>{ clearTimeout(snapTimer); setTimeout(restore,60); }, {once:true});
+}
+/* Deja la fila justo en la línea de lectura. Las filas que aún no se han
+   pintado miden lo estimado, así que el destino se desplaza mientras vuelas
+   hacia él: corrijo en pasadas hasta que cae donde debe. */
 function scrollToRow(el, smooth){
-  const r=el.getBoundingClientRect();
-  const y=r.top+window.scrollY+r.height/2-window.innerHeight*READ_LINE;
-  window.scrollTo({top:Math.max(0,y), behavior:(smooth&&!reduced)?'smooth':'auto'});
+  return new Promise(res=>{
+    let n=0;
+    const step=()=>{
+      if(!el.isConnected){ res(); return; }
+      const r=el.getBoundingClientRect();
+      const off=r.top+r.height/2-window.innerHeight*READ_LINE;
+      if(Math.abs(off)<22 || n>=4){ res(); return; }
+      const suave = smooth && n===0 && !reduced && Math.abs(off)>200;
+      withoutSnap(()=>window.scrollBy({top:off, behavior:suave?'smooth':'auto'}));
+      n++;
+      setTimeout(step, suave?660:100);
+    };
+    step();
+  });
 }
 async function goToDate(from, to, label){
   /* prefiere un momento de verdad dentro del rango, no la sombra de una efeméride */
@@ -1223,11 +1382,12 @@ async function goToDate(from, to, label){
   await ensureRendered(idx+4);
   const e=ENTRIES[idx], r=rowIndex.get(e.key);
   if(!r) return;
-  scrollToRow(r.el, true);
+  await scrollToRow(r.el, true);
   flashRow(e.key);
   headDate=e.d; setYear(e.d.getFullYear());
   setSub(SEASON_NAME[seasonOf(e.d)]+' · '+fmtMes(e.d));
   wTarget=seasonWeights(e.d);
+  if(reduced){ wCur=wTarget.slice(); applyTint(); }
   const inside = e.t>=from && e.t<=to;
   toast(inside ? label : 'Nada en '+label+'. Lo más cercano: '+fmtFechaLarga(e.d));
 }
@@ -1542,8 +1702,11 @@ async function jumpToMoment(id){
   clearFilter();
   await ensureRendered(idx+3);
   const e=ENTRIES[idx], r=rowIndex.get(e.key);
-  if(r){ scrollToRow(r.el, true); flashRow(e.key);
-    setTimeout(()=>{ if(!$('.card',r.el).classList.contains('open')) toggleRow(r.el,e); }, reduced?0:520); }
+  if(r){
+    await scrollToRow(r.el, true);
+    flashRow(e.key);
+    if(!$('.card',r.el).classList.contains('open')) toggleRow(r.el,e);
+  }
 }
 
 function commitSearch(q){
@@ -1678,8 +1841,10 @@ function openEditor(moment, isNew){
       '<div class="typebar" role="group" aria-label="Tipo de momento">'+
         Object.keys(TYPES).map(k=>'<button type="button" data-type="'+k+'" aria-pressed="'+(m.type===k)+'">'+esc(TYPES[k].label)+'</button>').join('')+
       '</div>'+
-      '<div class="f" id="presetWrap" hidden><label for="e-preset">Tipo de ficha</label>'+
-        '<select id="e-preset">'+Object.keys(PRESETS).map(k=>'<option value="'+k+'">'+PRESETS[k].icon+'  '+esc(PRESETS[k].label)+'</option>').join('')+'</select></div>'+
+      '<div class="f" id="presetWrap" hidden><label>Tipo de ficha</label>'+
+        '<div class="presets" role="group" aria-label="Tipo de ficha">'+
+        Object.keys(PRESETS).map(k=>'<button type="button" data-preset="'+k+'" aria-pressed="false">'+
+          gl(PRESETS[k].g)+esc(PRESETS[k].label)+'</button>').join('')+'</div></div>'+
       '<div class="f"><label for="e-title">Título</label>'+
         '<input type="text" id="e-title" placeholder="Una frase basta" autocomplete="off"></div>'+
       '<div class="f"><label for="e-note">Nota</label><textarea id="e-note" placeholder="Lo que quieras recordar de esto"></textarea></div>'+
@@ -1717,12 +1882,17 @@ function openEditor(moment, isNew){
       m.type=b.dataset.type;
       $$('[data-type]',body).forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.type===m.type)));
       $('#presetWrap',body).hidden = m.type!=='ficha';
-      if(m.type==='ficha' && !m.preset){ m.preset='vino'; $('#e-preset',body).value='vino'; }
-      drawFields();
+      if(m.type==='ficha' && !m.preset) m.preset='vino';
+      markPreset(); drawFields();
     }));
     $('#presetWrap',body).hidden = m.type!=='ficha';
-    if(m.preset) $('#e-preset',body).value=m.preset;
-    $('#e-preset',body).addEventListener('change',e=>{ m.preset=e.target.value; drawFields(); });
+    function markPreset(){
+      $$('[data-preset]',body).forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.preset===m.preset)));
+    }
+    markPreset();
+    $$('[data-preset]',body).forEach(b=>b.addEventListener('click',()=>{
+      m.preset=b.dataset.preset; markPreset(); drawFields();
+    }));
 
     function drawFields(){
       const box=$('#e-fields',body);
