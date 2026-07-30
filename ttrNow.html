@@ -2421,6 +2421,16 @@ function setupPWA(){
   }catch(e){}
 
   if(!('serviceWorker' in navigator) || location.protocol==='file:') return;
+
+  /* Si la app está servida desde un hosting, al lado hay un sw.js de verdad:
+     ese es el único que da offline en avión, porque un service worker no
+     puede registrarse desde un blob (ningún navegador lo permite). Si no
+     existe, la app funciona igual, solo sin caché propia. */
+  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+    .then(()=>{ swActive=true; })
+    .catch(()=>{ registrarDesdeBlob(); });
+}
+function registrarDesdeBlob(){
   const src=[
     "const C='ttrnow-v1', U="+JSON.stringify(location.href.split('#')[0])+";",
     "self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.add(U)).catch(()=>{}))});",
