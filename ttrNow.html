@@ -36,6 +36,7 @@ html{scroll-snap-type:y proximity;scroll-padding-bottom:10%}
   --display:"Didot","Bodoni 72","Bodoni MT","Hoefler Text","Playfair Display",ui-serif,Georgia,"Times New Roman",serif;
   --text:"Avenir Next","Avenir","Segoe UI Variable Text",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --gap:46px;
+  --barh:96px;   /* alto real de la barra de arriba, medido en vivo */
   --sat:env(safe-area-inset-top,0px);
   --sab:env(safe-area-inset-bottom,0px);
   --ease:cubic-bezier(.2,.85,.25,1);
@@ -187,6 +188,12 @@ body.reading #year,body.reading #yearSub{opacity:0}
 .row.efem .card{background:none;border-style:dashed;border-color:rgba(233,229,221,.13);opacity:.62;box-shadow:none}
 .row.efem .card:hover{opacity:.9}
 .chead{display:flex;gap:9px;align-items:flex-start}
+/* Con el momento abierto el título se queda clavado bajo la barra y el resto
+   pasa por debajo: si no, al leer una nota larga pierdes de vista qué estás
+   leyendo. */
+.card.open .chead{position:sticky;top:calc(var(--barh) + 6px);z-index:6;
+  margin:-13px -14px 10px;padding:12px 14px 9px;border-radius:12px 12px 0 0;
+  background:linear-gradient(180deg,rgba(34,41,53,.995) 68%,rgba(31,38,49,.97))}
 .cthumb{flex:none;width:44px;height:44px;border-radius:8px;overflow:hidden;background:rgba(233,229,221,.05);
   position:relative;transition:width .3s var(--ease),height .3s var(--ease)}
 .cthumb img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .45s}
@@ -206,11 +213,11 @@ body.reading #year,body.reading #yearSub{opacity:0}
   -webkit-mask-image:linear-gradient(90deg,#000 82%,transparent 100%);
   mask-image:linear-gradient(90deg,#000 82%,transparent 100%)}
 .cmeta .mi{display:inline-flex;align-items:center;gap:3px;flex:none}
-.cx{position:absolute;top:5px;right:5px;width:32px;height:32px;display:none;
-  place-items:center;border-radius:50%;color:var(--dim);font-size:19px;line-height:1;z-index:4}
+/* la X viaja dentro de la cabecera, así se queda fija con el título */
+.cx{display:none;flex:none;width:34px;height:34px;place-items:center;margin:-4px -6px 0 2px;
+  border-radius:50%;color:var(--dim);font-size:20px;line-height:1}
 .card.open .cx{display:grid}
 .cx:hover{color:var(--ink);background:rgba(233,229,221,.07)}
-.card.open .ctitle{padding-right:34px}
 .card.open .cmeta{flex-wrap:wrap;overflow:visible;-webkit-mask-image:none;mask-image:none}
 .cmeta .gl{width:11px;height:11px}
 .kind{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);opacity:.85}
@@ -281,9 +288,12 @@ body.reading #year,body.reading #yearSub{opacity:0}
 #fab.hold{transform:scale(1.12);box-shadow:0 14px 40px -14px #000,0 0 0 10px rgba(198,161,91,.12)}
 
 /* ---------- sheet ---------- */
-.sheet{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center}
+/* --kb es lo que ocupa el teclado del móvil, medido con visualViewport: sin
+   esto el teclado de iOS tapa justo el campo en el que estás escribiendo */
+.sheet{position:fixed;left:0;right:0;top:0;bottom:var(--kb,0px);z-index:40;
+  display:flex;align-items:flex-end;justify-content:center;transition:bottom .2s var(--ease)}
 .sheet-bd{position:absolute;inset:0;background:rgba(5,6,8,.62);backdrop-filter:blur(3px);animation:fade .25s}
-.sheet-panel{position:relative;width:100%;max-width:640px;max-height:92svh;overflow-y:auto;overscroll-behavior:contain;
+.sheet-panel{position:relative;width:100%;max-width:640px;max-height:var(--sheetmax,92svh);overflow-y:auto;overscroll-behavior:contain;
   background:linear-gradient(180deg,#161B22,#0F1318);border:1px solid var(--hair);border-bottom:0;
   border-radius:20px 20px 0 0;padding:8px 16px calc(var(--sab) + 22px);
   animation:up .34s var(--ease);box-shadow:0 -20px 60px -20px rgba(0,0,0,1)}
@@ -301,6 +311,14 @@ body.reading #year,body.reading #yearSub{opacity:0}
 .f textarea{min-height:88px;resize:vertical;line-height:1.5}
 .f input:focus,.f textarea:focus,.f select:focus{border-color:rgba(198,161,91,.45)}
 .f .hint{font-size:11px;color:var(--faint);margin-top:4px}
+.lblrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.minibtn{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);
+  padding:3px 8px;border:1px solid rgba(198,161,91,.3);border-radius:99px}
+.chipwrap{display:inline-flex;align-items:center;gap:3px}
+.chipdel{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;
+  color:var(--dim);font-size:14px;line-height:1;background:rgba(233,229,221,.06)}
+.chipdel.go{width:auto;padding:0 9px;height:22px;border-radius:99px;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:#14100A;background:#D98C7A}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .typebar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
 .typebar button{border:1px solid var(--hair);border-radius:99px;padding:6px 13px;font-size:12px;color:var(--dim)}
@@ -323,7 +341,8 @@ body.reading #year,body.reading #yearSub{opacity:0}
 .thumbs button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;
   background:rgba(0,0,0,.66);color:#fff;font-size:13px;display:grid;place-items:center}
 .aud{display:flex;align-items:center;gap:8px;margin:6px 0}
-.aud audio{flex:1;height:32px;filter:invert(.92) hue-rotate(180deg) contrast(.9)}
+.aud audio{flex:1;min-width:0;height:32px;filter:invert(.92) hue-rotate(180deg) contrast(.9)}
+.adur{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 .save{width:100%;margin-top:8px;background:var(--brass);color:#14100A;border-radius:11px;padding:13px;
   font-size:15px;font-weight:500;letter-spacing:.02em}
 .save:disabled{opacity:.4}
@@ -688,6 +707,19 @@ async function savePhoto(file){
   ]);
   const taken=await exifDate(file);
   return {id, thumbId:tid, w:full.w, h:full.h, takenAt: taken? taken.toISOString(): null, alt:''};
+}
+const fmtDur = s => { s=Math.max(0,Math.round(s||0)); return Math.floor(s/60)+':'+pad(s%60); };
+/* MediaRecorder no escribe la duración en la cabecera, así que el reproductor
+   nativo marca 00:00 y no deja arrastrar. El apaño estándar: buscar hasta el
+   final para forzar que el navegador la calcule. */
+function arreglarDuracion(a){
+  a.addEventListener('loadedmetadata', ()=>{
+    if(a.duration===Infinity || isNaN(a.duration) || a.duration===0){
+      const volver=()=>{ a.currentTime=0; a.removeEventListener('timeupdate',volver); };
+      a.addEventListener('timeupdate', volver);
+      try{ a.currentTime=1e101; }catch(e){}
+    }
+  });
 }
 async function saveAudioBlob(blob, dur){
   const id=uid();
@@ -1055,9 +1087,10 @@ function makeRow(e, idx){
     '<div class="chead">'+thumb+'<div class="cmain">'+
       '<h3 class="ctitle">'+(g?gl(g):'')+esc(title)+'</h3>'+noteLine+
       (meta.length?'<div class="cmeta">'+meta.join('')+'</div>':'')+
-    '</div></div>'+
-    '<div class="cdetail"><div></div></div>'+
-    '<button class="cx" type="button" aria-label="Cerrar este momento">&times;</button>';
+    '</div>'+
+    '<button class="cx" type="button" aria-label="Cerrar este momento">&times;</button>'+
+    '</div>'+
+    '<div class="cdetail"><div></div></div>';
 
   card.setAttribute('aria-label', kindOf(m)+'. '+title+'. '+fmtFechaLarga(e.d));
   row.appendChild(node); row.appendChild(tick); row.appendChild(st); row.appendChild(card);
@@ -1220,11 +1253,15 @@ async function toggleRow(row, e, forceClose){
   card.setAttribute('aria-expanded','true');
   openRow=row;
   document.body.classList.add('reading');
+  /* Alinea el arranque de la tarjeta justo bajo la barra en vez de centrarla:
+     centrar una tarjeta más alta que la pantalla dejaba el título arriba,
+     fuera de vista. */
   setTimeout(()=>{
+    const target=barHeight()+10;
     const r=card.getBoundingClientRect();
-    if(r.top<90 || r.bottom>window.innerHeight-20)
-      card.scrollIntoView({behavior:reduced?'auto':'smooth', block:'center'});
-  }, reduced?0:260);
+    if(r.top<target-2 || r.height>window.innerHeight-target-70 || r.bottom>window.innerHeight-20)
+      withoutSnap(()=>window.scrollBy({top:r.top-target, behavior:reduced?'auto':'smooth'}));
+  }, reduced?0:280);
 }
 function releaseDetail(card){
   $$('img[data-full],audio[data-mid]',card).forEach(el=>{
@@ -1247,7 +1284,9 @@ async function buildDetail(e, row){
   if(m.note) bits.push('<p class="dnote">'+esc(m.note)+'</p>');
 
   for(const ph of (m.photos||[])) bits.push('<img class="full" data-full="'+esc(ph.id)+'" alt="'+esc(ph.alt||('Foto de '+(m.title||'un momento')))+'">');
-  for(const au of (m.audio||[])) bits.push('<audio controls preload="none" data-mid="'+esc(au.id)+'"></audio>');
+  for(const au of (m.audio||[]))
+    bits.push('<div class="aud"><audio controls preload="metadata" data-mid="'+esc(au.id)+'"></audio>'+
+      (au.dur?'<span class="adur">'+esc(fmtDur(au.dur))+'</span>':'')+'</div>');
 
   if(m.type==='ficha' && m.preset && PRESETS[m.preset]){
     const fs=PRESETS[m.preset].fields.filter(f=>m.fields && m.fields[f.k]!=null && m.fields[f.k]!=='');
@@ -1286,6 +1325,7 @@ async function buildDetail(e, row){
     img.addEventListener('click', ev=>{ ev.stopPropagation(); openLightbox(img.src, img.alt); });
   });
   $$('audio[data-mid]',wrap).forEach(async a=>{
+    arreglarDuracion(a);
     const u=await mediaURL(a.dataset.mid);
     if(u){ a.src=u; a._url=true; }
     a.addEventListener('click',ev=>ev.stopPropagation());
@@ -1777,6 +1817,43 @@ function renderOnThisDay(){
 /* ------------------------------------------------------------------ *
  * Hojas (editor, ajustes, confirmación)
  * ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ *
+ * Teclado del móvil y alto de la barra
+ * ------------------------------------------------------------------ */
+const rootStyle=document.documentElement.style;
+function barHeight(){
+  const v=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--barh'),10);
+  return isNaN(v)?96:v;
+}
+(function medirBarra(){
+  const bar=$('#bar');
+  const sync=()=>rootStyle.setProperty('--barh', Math.round(bar.getBoundingClientRect().height)+'px');
+  if(window.ResizeObserver) new ResizeObserver(sync).observe(bar);
+  window.addEventListener('resize', sync, {passive:true});
+  sync();
+})();
+/* En iOS el teclado no cambia window.innerHeight, solo el visualViewport: sin
+   medirlo, la hoja de edición se queda debajo del teclado y escribes a ciegas. */
+(function medirTeclado(){
+  const vv=window.visualViewport;
+  if(!vv){ rootStyle.setProperty('--sheetmax','92svh'); return; }
+  const sync=()=>{
+    const kb=Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    rootStyle.setProperty('--kb', kb+'px');
+    rootStyle.setProperty('--sheetmax', Math.round(vv.height-10)+'px');
+  };
+  vv.addEventListener('resize', sync);
+  vv.addEventListener('scroll', sync);
+  sync();
+})();
+/* y que el campo enfocado suba a la vista dentro de la hoja */
+document.addEventListener('focusin', e=>{
+  const panel=e.target.closest && e.target.closest('.sheet-panel');
+  if(!panel) return;
+  const campo=e.target.closest('.f')||e.target;
+  setTimeout(()=>{ try{ campo.scrollIntoView({block:'center',behavior:'smooth'}); }catch(err){} }, 340);
+});
+
 let sheetEl=null, sheetClose=null;
 function openSheet(title, build, opts){
   closeSheet();
@@ -1860,7 +1937,9 @@ function openEditor(moment, isNew){
       '<div class="f" id="g-place" hidden><label for="e-place">Lugar</label>'+
         '<input type="text" id="e-place" list="dl-places" placeholder="¿Dónde?" autocomplete="off">'+
         '<datalist id="dl-places"></datalist></div>'+
-      '<div class="f" id="g-people" hidden><label>Personas</label><div class="chips" id="peopleChips"></div>'+
+      '<div class="f" id="g-people" hidden>'+
+        '<label class="lblrow">Personas<button type="button" id="peopleManage" class="minibtn">Gestionar</button></label>'+
+        '<div class="chips" id="peopleChips"></div>'+
         '<input type="text" id="e-person" placeholder="Añadir persona y pulsar Intro" autocomplete="off"></div>'+
       '<div class="f" id="g-tags" hidden><label>Etiquetas</label><div class="chips" id="tagChips"></div>'+
         '<input type="text" id="e-tag" placeholder="Añadir etiqueta y pulsar Intro" autocomplete="off"></div>'+
@@ -1925,18 +2004,54 @@ function openEditor(moment, isNew){
     }));
 
     /* personas y etiquetas como chips */
+    let gestionando=false, porBorrar=null;
     function drawPeople(){
       const box=$('#peopleChips',body);
       const known=PEOPLE.slice().sort((a,b)=>a.name.localeCompare(b.name));
-      box.innerHTML=known.map(p=>'<button type="button" class="chip'+(m.peopleIds.indexOf(p.id)>=0?' p':'')+'" data-pid="'+p.id+'">'+esc(p.name)+'</button>').join('')
-        || '<span style="font-size:11.5px;color:var(--faint)">Escribe abajo para crear la primera</span>';
+      box.innerHTML=known.map(p=>{
+        const puesta=m.peopleIds.indexOf(p.id)>=0;
+        const chip='<button type="button" class="chip'+(puesta?' p':'')+'" data-pid="'+p.id+'">'+esc(p.name)+'</button>';
+        if(!gestionando) return chip;
+        const confirmando = porBorrar===p.id;
+        return '<span class="chipwrap">'+chip+
+          '<button type="button" class="chipdel'+(confirmando?' go':'')+'" data-delpid="'+p.id+'" '+
+          'aria-label="'+(confirmando?'Confirmar borrado de ':'Borrar a ')+esc(p.name)+'">'+
+          (confirmando?'borrar':'&times;')+'</button></span>';
+      }).join('') || '<span style="font-size:11.5px;color:var(--faint)">Escribe abajo para crear la primera</span>';
+      const ges=$('#peopleManage',body);
+      if(ges){ ges.textContent=gestionando?'Hecho':'Gestionar'; ges.hidden=!known.length; }
       $$('[data-pid]',box).forEach(b=>b.addEventListener('click',()=>{
         const i=m.peopleIds.indexOf(b.dataset.pid);
         if(i>=0) m.peopleIds.splice(i,1); else m.peopleIds.push(b.dataset.pid);
-        drawPeople();
+        porBorrar=null; drawPeople();
+      }));
+      $$('[data-delpid]',box).forEach(b=>b.addEventListener('click',async ()=>{
+        const id=b.dataset.delpid;
+        if(porBorrar!==id){ porBorrar=id; drawPeople(); return; }   // primer toque: avisa
+        porBorrar=null;
+        await borrarPersona(id);
       }));
     }
+    /* Borra a una persona de verdad y la quita de todos los momentos donde
+       estuviera: si no, quedarían referencias a un nombre que ya no existe. */
+    async function borrarPersona(id){
+      const p=PMAP.get(id);
+      const tocados=MOMENTS.filter(x=>(x.peopleIds||[]).indexOf(id)>=0);
+      for(const t of tocados){
+        t.peopleIds=t.peopleIds.filter(v=>v!==id);
+        t.updatedAt=new Date().toISOString();
+        const copia=Object.assign({},t); delete copia._doc; delete copia._toks;
+        await dbPut('moments', copia);
+      }
+      await dbDel('people', id);
+      PEOPLE=PEOPLE.filter(x=>x.id!==id); PMAP.delete(id);
+      m.peopleIds=m.peopleIds.filter(v=>v!==id);
+      drawPeople();
+      await refreshAll();
+      toast((p?p.name:'Persona')+' borrada'+(tocados.length?' · quitada de '+tocados.length+' momento'+(tocados.length===1?'':'s'):''));
+    }
     drawPeople();
+    $('#peopleManage',body).addEventListener('click',()=>{ gestionando=!gestionando; porBorrar=null; drawPeople(); });
     $('#e-person',body).addEventListener('keydown',async e=>{
       if(e.key!=='Enter') return; e.preventDefault();
       const v=e.target.value.trim(); if(!v) return;
@@ -2009,12 +2124,15 @@ function openEditor(moment, isNew){
       const wrap=$('#audioWrap',body); wrap.innerHTML='';
       m.audio.forEach(async au=>{
         const div=document.createElement('div'); div.className='aud';
-        const a=document.createElement('audio'); a.controls=true; a.preload='none';
+        const a=document.createElement('audio'); a.controls=true; a.preload='metadata';
+        arreglarDuracion(a);
         const u=await mediaURL(au.id); if(u) a.src=u;
+        if(au.dur){ const d=document.createElement('span'); d.className='adur'; d.textContent=fmtDur(au.dur); div.appendChild(a); div.appendChild(d); }
         const del=document.createElement('button'); del.type='button'; del.textContent='Quitar';
         del.style.cssText='font-size:12px;color:var(--dim)';
         del.addEventListener('click',()=>{ m.audio=m.audio.filter(x=>x.id!==au.id); pendingMedia.audio.push(au); drawAudio(); });
-        div.appendChild(a); div.appendChild(del); wrap.appendChild(div);
+        if(!div.contains(a)) div.appendChild(a);
+        div.appendChild(del); wrap.appendChild(div);
       });
     }
     drawAudio();
@@ -2032,9 +2150,13 @@ function openEditor(moment, isNew){
           stream.getTracks().forEach(t=>t.stop());
           recBtn.classList.remove('rec'); $('span',recBtn).textContent='Voz';
           const blob=new Blob(recChunks,{type:recorder.mimeType||'audio/webm'});
-          const dur=Math.round((Date.now()-recStart)/1000);
-          if(blob.size>500){
-            const au=await saveAudioBlob(blob,dur);
+          const seg=(Date.now()-recStart)/1000;
+          /* un toque accidental dejaba una nota de voz de cero segundos que no
+             suena y no se puede escuchar: mejor no guardarla y decirlo */
+          if(seg<0.8 || blob.size<800){
+            toast('Muy corto, no lo guardo');
+          } else {
+            const au=await saveAudioBlob(blob, Math.round(seg));
             m.audio.push(au); pendingMedia.audio.push(au); drawAudio();
           }
           recorder=null;
