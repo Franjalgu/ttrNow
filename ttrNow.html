@@ -2418,6 +2418,17 @@ function setupPWA(){
              {src:mask,sizes:'512x512',type:'image/png',purpose:'maskable'}]
     };
     $('#manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}));
+    /* Si la app está servida y al lado hay manifest e iconos de verdad, uso
+       esos: iOS no siempre se cree un icono que nace de un data: URI, y ese
+       icono lo vas a ver todos los días en la pantalla de inicio. Si no
+       están, se queda el que acabo de dibujar y todo sigue funcionando. */
+    if(location.protocol==='http:'||location.protocol==='https:'){
+      fetch('./manifest.webmanifest',{method:'HEAD'}).then(r=>{
+        if(!r.ok) return;
+        $('#manifestLink').href='./manifest.webmanifest';
+        $('#appleIcon').href='./apple-touch-icon.png';
+      }).catch(()=>{});
+    }
   }catch(e){}
 
   if(!('serviceWorker' in navigator) || location.protocol==='file:') return;

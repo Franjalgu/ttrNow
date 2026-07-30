@@ -9,7 +9,7 @@
  * esto solo guarda el propio programa.
  */
 const CACHE = 'ttrnow-v1';
-const CORE = ['./', './ttrNow.html'];
+const CORE = ['./', './ttrNow.html', './manifest.webmanifest', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
