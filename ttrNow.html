@@ -402,8 +402,39 @@ body.reading #year,body.reading #yearSub{opacity:0}
 
 #toast{position:fixed;z-index:70;left:50%;transform:translate(-50%,20px);bottom:calc(var(--sab) + 92px);
   background:rgba(24,29,37,.97);border:1px solid var(--hair);border-radius:10px;padding:9px 15px;font-size:13px;
-  opacity:0;pointer-events:none;transition:opacity .25s,transform .25s var(--ease);max-width:88vw;text-align:center}
+  opacity:0;pointer-events:none;transition:opacity .25s,transform .25s var(--ease);max-width:88vw;text-align:center;
+  display:inline-flex;align-items:center;gap:14px}
 #toast.on{opacity:1;transform:translate(-50%,0)}
+#toast .undo{pointer-events:auto;color:var(--brass);font-size:13px;font-weight:500;
+  padding:2px 4px;letter-spacing:.02em}
+.entgrupo{margin-bottom:16px}
+.enth{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);
+  padding-bottom:6px;border-bottom:1px solid var(--hair);margin-bottom:4px}
+.entfila{display:flex;align-items:center;gap:9px;padding:7px 0}
+.entnom{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entn{flex:none;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+.entinput{flex:1;min-width:0;background:rgba(233,229,221,.05);border:1px solid rgba(198,161,91,.4);
+  border-radius:8px;padding:7px 10px;font-size:16px;outline:none}
+.entvacio{font-size:12px;color:var(--faint);padding:8px 0}
+#progreso{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(5,6,8,.86);
+  backdrop-filter:blur(4px);padding:24px}
+.pg{width:100%;max-width:320px;text-align:center}
+.pgt{font-size:14px;margin-bottom:14px}
+.pgbar{height:3px;border-radius:99px;background:rgba(233,229,221,.12);overflow:hidden}
+.pgbar i{display:block;height:100%;width:0;background:var(--brass);transition:width .2s linear}
+.pgn{margin-top:10px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+/* cerrojo: mientras está puesto, del diario no se ve ni el reflejo */
+body.tapado #timeline,body.tapado #bar,body.tapado #fab,body.tapado #year,body.tapado #yearSub{
+  filter:blur(22px);pointer-events:none;user-select:none}
+#cerrojo{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:26px;
+  background:rgba(6,7,10,.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.cj{width:100%;max-width:300px;text-align:center}
+.cjmarca .gl{width:26px;height:26px;color:var(--brass);stroke-width:1.1}
+.cj h1{font-family:var(--display);font-weight:400;font-size:34px;margin:10px 0 4px;letter-spacing:.02em}
+.cj p{font-size:13px;color:var(--dim);margin:0 0 22px;min-height:19px}
+.cj input{width:100%;background:rgba(233,229,221,.05);border:1px solid var(--hair);border-radius:10px;
+  padding:12px;font-size:17px;text-align:center;letter-spacing:.3em;outline:none;margin:10px 0 0}
+.cj input:focus{border-color:rgba(198,161,91,.5)}
 #drop{position:fixed;inset:0;z-index:65;display:none;place-items:center;background:rgba(5,6,8,.8);
   border:2px dashed rgba(198,161,91,.5);font-size:16px;color:var(--brass)}
 #drop.on{display:grid}
@@ -530,6 +561,19 @@ const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<'
 function toast(msg, ms){
   const t=$('#toast'); t.textContent=msg; t.classList.add('on');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'), ms||2400);
+}
+/* aviso con salida de emergencia: borrar algo por error no puede ser el fin */
+function toastDeshacer(msg, ms, alDeshacer){
+  const t=$('#toast');
+  t.textContent='';
+  const s=document.createElement('span'); s.textContent=msg;
+  const b=document.createElement('button'); b.className='undo'; b.textContent='Deshacer';
+  t.appendChild(s); t.appendChild(b);
+  t.classList.add('on');
+  clearTimeout(t._t);
+  const cerrar=()=>{ t.classList.remove('on'); setTimeout(()=>{ if(!t.classList.contains('on')) t.textContent=''; },400); };
+  t._t=setTimeout(cerrar, ms);
+  b.addEventListener('click',()=>{ clearTimeout(t._t); cerrar(); alDeshacer(); });
 }
 
 /* ------------------------------------------------------------------ *
@@ -1123,7 +1167,13 @@ function makeRow(e, idx){
   if((m.peopleIds||[]).length) meta.push('<span class="mi">'+IC.ppl+esc(m.peopleIds.map(personName).filter(Boolean).slice(0,2).join(', '))+((m.peopleIds.length>2)?' +'+(m.peopleIds.length-2):'')+'</span>');
   if((m.tags||[]).length) meta.push('<span class="mi">'+IC.tag+esc(m.tags.slice(0,2).join(' '))+'</span>');
 
-  const title = m.title || (m.note ? m.note.split('\n')[0].slice(0,60) : 'Sin título');
+  /* los que llegan del carrete no traen título: mejor decir qué son que
+     llenar la línea de "Sin título" repetido */
+  const title = m.title
+    || (m.note ? m.note.split('\n')[0].slice(0,60)
+      : nPhotos ? (nPhotos===1?'Una foto':nPhotos+' fotos')
+      : (m.audio||[]).length ? 'Nota de voz'
+      : 'Sin título');
   const noteLine = m.note && m.title ? '<p class="cnote">'+esc(m.note.replace(/\s+/g,' ').slice(0,140))+'</p>' : '';
   const g=glyphOf(m);
 
@@ -2326,15 +2376,29 @@ function openEditor(moment, isNew){
 }
 
 function confirmDelete(m){
-  confirmSheet('¿Borrar este momento?', (m.title||'Sin título')+' — '+fmtFechaLarga(new Date(m.datetime))+'. No se puede deshacer.',
+  confirmSheet('¿Borrar este momento?', (m.title||'Sin título')+' — '+fmtFechaLarga(new Date(m.datetime))+'.',
     'Sí, borrar', async ()=>{
-      const ids=[]; (m.photos||[]).forEach(p=>{ids.push(p.id); if(p.thumbId)ids.push(p.thumbId);});
-      (m.audio||[]).forEach(a=>ids.push(a.id));
-      await deleteMedia(ids);
+      /* El momento sale de la lista ya, pero sus fotos y audios no se tocan
+         hasta que se cierra la ventana de deshacer: si los borrara ahora,
+         deshacer devolvería una ficha sin nada dentro. */
+      const copia=Object.assign({},m); delete copia._doc; delete copia._toks;
       await dbDel('moments', m.id);
       MOMENTS=MOMENTS.filter(x=>x.id!==m.id);
       await refreshAll();
-      toast('Borrado');
+      let deshecho=false;
+      toastDeshacer('Borrado', 7000, async ()=>{
+        deshecho=true;
+        await dbPut('moments', copia);
+        MOMENTS.push(copia);
+        await refreshAll(copia.id);
+        toast('Recuperado');
+      });
+      setTimeout(async ()=>{
+        if(deshecho) return;
+        const ids=[]; (copia.photos||[]).forEach(p=>{ids.push(p.id); if(p.thumbId)ids.push(p.thumbId);});
+        (copia.audio||[]).forEach(a=>ids.push(a.id));
+        await deleteMedia(ids);
+      }, 7600);
     }, true);
 }
 
@@ -2368,7 +2432,15 @@ function human(b){
   while(b>=1024 && i<3){ b/=1024; i++; }
   return (i? b.toFixed(1):Math.round(b))+' '+u[i];
 }
-async function doExport(){
+/* ¿puede este navegador mandar el zip a la hoja de compartir del sistema? */
+const puedeCompartirArchivos = (()=>{
+  try{
+    if(!navigator.canShare || !navigator.share) return false;
+    return navigator.canShare({files:[new File([new Blob(['x'])],'p.zip',{type:'application/zip'})]});
+  }catch(e){ return false; }
+})();
+
+async function doExport(compartir){
   toast('Preparando el respaldo…', 8000);
   const media=await dbAll('media');
   const doc={
@@ -2391,11 +2463,28 @@ async function doExport(){
   for(const x of media) files.push({name:'media/'+x.id+mimeExt(x.mime), data:x.blob, compress:false});
   const zip=await makeZip(files);
   const d=new Date();
-  download(zip, 'ttrNow-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.zip');
+  const nombre='ttrNow-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.zip';
+
+  let entregado=false;
+  if(compartir && puedeCompartirArchivos){
+    try{
+      await navigator.share({files:[new File([zip], nombre, {type:'application/zip'})],
+        title:'Respaldo de ttrNow'});
+      entregado=true;
+      toast('Respaldo enviado · '+human(zip.size));
+    }catch(err){
+      /* si lo cancelas tú, no es un fallo y no hay que descargar nada */
+      if(err && err.name==='AbortError'){ toast('Respaldo cancelado'); return; }
+      toast('La hoja de compartir falló, lo descargo');
+    }
+  }
+  if(!entregado){
+    download(zip, nombre);
+    toast('Respaldo descargado · '+human(zip.size));
+  }
   await metaSet('lastExport', Date.now());
   await metaSet('lastExportCount', MOMENTS.length);
   updateNotice();
-  toast('Respaldo descargado · '+human(zip.size));
 }
 async function doImport(file){
   try{
@@ -2440,21 +2529,209 @@ async function openSettings(){
       '<div class="setrow"><span>Almacenamiento persistente</span><span>'+(persisted?'sí':'no garantizado')+'</span></div>'+
       '<div class="setrow"><span>Personas · lugares · fichas</span><span>'+PEOPLE.length+' · '+PLACES.length+' · '+THINGS.length+'</span></div>'+
       '<div class="setrow"><span>Último respaldo</span><span>'+(last? fmtFechaLarga(new Date(last)) : 'nunca')+'</span></div>'+
-      '<button class="save" id="s-exp">Exportar respaldo (.zip)</button>'+
+      (puedeCompartirArchivos
+        ? '<button class="save" id="s-share">Compartir respaldo (.zip)</button>'+
+          '<button class="ghostbtn" id="s-exp">Descargar el respaldo</button>'
+        : '<button class="save" id="s-exp">Exportar respaldo (.zip)</button>')+
       '<button class="ghostbtn" id="s-imp">Importar un respaldo</button>'+
+      '<button class="ghostbtn" id="s-fotos">Crear momentos desde fotos</button>'+
+      '<button class="ghostbtn" id="s-ent">Personas, lugares y etiquetas</button>'+
+      '<button class="ghostbtn" id="s-lock">'+(bloqueoCfg?'Bloqueo: activado':'Poner un bloqueo al abrir')+'</button>'+
       (seeded?'<button class="ghostbtn" id="s-seed">Borrar los momentos de ejemplo</button>':'')+
       '<button class="ghostbtn danger" id="s-wipe">Borrar todo el diario</button>'+
       '<p class="sub">Todo vive en este dispositivo, dentro de este archivo. No hay servidor, ni cuenta, ni copia en la nube: el respaldo lo haces tú.<br>'+
       'El zip es un formato abierto y documentado dentro del propio data.json.</p>'+
       '<p class="sub" style="color:var(--faint)">ttrNow · '+(swActive?'service worker activo':'sin service worker (funciona igual estando offline)')+'</p>';
-    $('#s-exp',body).addEventListener('click',doExport);
+    $('#s-exp',body).addEventListener('click',()=>doExport(false));
+    const sh=$('#s-share',body);
+    if(sh) sh.addEventListener('click',()=>doExport(true));
     $('#s-imp',body).addEventListener('click',()=>$('#zipPicker').click());
+    $('#s-ent',body).addEventListener('click',openEntities);
+    $('#s-lock',body).addEventListener('click',configurarBloqueo);
+    $('#s-fotos',body).addEventListener('click',importarFotos);
     const sb=$('#s-seed',body);
     if(sb) sb.addEventListener('click',()=>confirmSheet('¿Borrar los ejemplos?','Se van los momentos de muestra y sus fotos. Lo que hayas escrito tú se queda.','Borrar ejemplos',clearSeed,true));
     $('#s-wipe',body).addEventListener('click',()=>confirmSheet('¿Borrar todo?','Se borra el diario entero de este dispositivo. Si no tienes un respaldo, no hay vuelta atrás.','Borrar todo',wipeAll,true));
   });
 }
 $('#gear').addEventListener('click',openSettings);
+
+/* ------------------------------------------------------------------ *
+ * Personas, lugares y etiquetas: renombrar, fusionar y borrar
+ * ------------------------------------------------------------------ */
+async function guardarMomento(m){
+  m.updatedAt=new Date().toISOString();
+  const c=Object.assign({},m); delete c._doc; delete c._toks;
+  await dbPut('moments', c);
+}
+function usoDe(tipo, id){
+  if(tipo==='persona') return MOMENTS.filter(m=>(m.peopleIds||[]).indexOf(id)>=0);
+  if(tipo==='lugar')   return MOMENTS.filter(m=>m.placeId===id);
+  return MOMENTS.filter(m=>(m.tags||[]).indexOf(id)>=0);   // en etiquetas el id es el propio texto
+}
+async function renombrarEntidad(tipo, id, nuevo){
+  nuevo=(nuevo||'').trim();
+  if(!nuevo) return 'vacío';
+  const clave=norm(nuevo);
+  if(tipo==='etiqueta'){
+    const limpio=nuevo.replace(/^#/,'');
+    for(const m of MOMENTS){
+      if(!(m.tags||[]).length) continue;
+      const antes=m.tags.join(' ');
+      m.tags=Array.from(new Set(m.tags.map(t=>t===id?limpio:t)));
+      if(m.tags.join(' ')!==antes) await guardarMomento(m);
+    }
+    return 'ok';
+  }
+  const lista = tipo==='persona'?PEOPLE:PLACES, store = tipo==='persona'?'people':'places';
+  const mapa  = tipo==='persona'?PMAP:LMAP;
+  const gemelo=lista.find(x=>x.key===clave && x.id!==id);
+  if(gemelo){
+    /* ya existe otra con ese nombre: fusiona en vez de duplicar */
+    for(const m of usoDe(tipo,id)){
+      if(tipo==='persona'){
+        m.peopleIds=Array.from(new Set(m.peopleIds.map(v=>v===id?gemelo.id:v)));
+      } else m.placeId=gemelo.id;
+      await guardarMomento(m);
+    }
+    await dbDel(store, id);
+    if(tipo==='persona'){ PEOPLE=PEOPLE.filter(x=>x.id!==id); } else { PLACES=PLACES.filter(x=>x.id!==id); }
+    mapa.delete(id);
+    return 'fusionado:'+gemelo.name;
+  }
+  const ent=mapa.get(id); if(!ent) return 'no está';
+  ent.name=nuevo; ent.key=clave;
+  await dbPut(store, ent);
+  return 'ok';
+}
+async function borrarEntidad(tipo, id){
+  for(const m of usoDe(tipo,id)){
+    if(tipo==='persona') m.peopleIds=m.peopleIds.filter(v=>v!==id);
+    else if(tipo==='lugar') m.placeId=null;
+    else m.tags=m.tags.filter(t=>t!==id);
+    await guardarMomento(m);
+  }
+  if(tipo==='persona'){ await dbDel('people',id); PEOPLE=PEOPLE.filter(x=>x.id!==id); PMAP.delete(id); }
+  if(tipo==='lugar'){   await dbDel('places',id); PLACES=PLACES.filter(x=>x.id!==id); LMAP.delete(id); }
+}
+
+/* ------------------------------------------------------------------ *
+ * Traer el carrete: una tanda de fotos se convierte en momentos ya
+ * colocados en su fecha. Las que se hicieron seguidas van juntas, porque
+ * doce fotos de la misma tarde son una tarde, no doce momentos.
+ * ------------------------------------------------------------------ */
+const HUECO_TANDA = 45*60*1000;
+function importarFotos(){
+  pickPhotos(async files=>{
+    closeSheet();
+    const total=files.length;
+    let hechas=0;
+    const panel=document.createElement('div');
+    panel.id='progreso';
+    panel.innerHTML='<div class="pg"><div class="pgt">Leyendo '+total+' foto'+(total===1?'':'s')+'…</div>'+
+      '<div class="pgbar"><i></i></div><div class="pgn">0 de '+total+'</div></div>';
+    document.body.appendChild(panel);
+    const paso=(n,txt)=>{
+      $('.pgbar i',panel).style.width=Math.round(n/total*100)+'%';
+      $('.pgn',panel).textContent=n+' de '+total;
+      if(txt) $('.pgt',panel).textContent=txt;
+    };
+    /* primero las fechas, para poder agrupar antes de comprimir nada */
+    const conFecha=[];
+    for(const f of files){
+      let cuando=await exifDate(f);
+      if(!cuando && f.lastModified) cuando=new Date(f.lastModified);
+      conFecha.push({file:f, t:(cuando&&!isNaN(cuando))?cuando.getTime():Date.now()});
+      hechas++; paso(hechas);
+      if(hechas%4===0) await new Promise(r=>setTimeout(r,0));
+    }
+    conFecha.sort((a,b)=>a.t-b.t);
+    const tandas=[];
+    for(const x of conFecha){
+      const ult=tandas[tandas.length-1];
+      if(ult && x.t-ult[ult.length-1].t<=HUECO_TANDA) ult.push(x);
+      else tandas.push([x]);
+    }
+    hechas=0;
+    paso(0,'Creando '+tandas.length+' momento'+(tandas.length===1?'':'s')+'…');
+    let ultimoId=null;
+    for(const tanda of tandas){
+      const fotos=[];
+      for(const x of tanda){
+        try{ fotos.push(await savePhoto(x.file)); }catch(e){}
+        hechas++; paso(hechas);
+        await new Promise(r=>setTimeout(r,0));
+      }
+      if(!fotos.length) continue;
+      const cuando=new Date(tanda[0].t);
+      const m=newMoment({
+        datetime:cuando.toISOString(), createdAt:new Date().toISOString(),
+        photos:fotos, title:'', note:''
+      });
+      await dbPut('moments', m);
+      MOMENTS.push(m);
+      ultimoId=m.id;
+    }
+    panel.remove();
+    await refreshAll(ultimoId);
+    const n=tandas.length;
+    toast(n+' momento'+(n===1?'':'s')+' desde '+total+' foto'+(total===1?'':'s')+'. Ponles título cuando quieras', 5200);
+  });
+}
+
+function openEntities(){
+  let editando=null, borrando=null;
+  openSheet('Personas, lugares y etiquetas', body=>{
+    const pinta=()=>{
+      const tags=new Map();
+      for(const m of MOMENTS) for(const t of (m.tags||[])) tags.set(t,(tags.get(t)||0)+1);
+      const grupos=[
+        {tipo:'persona', titulo:'Personas', items:PEOPLE.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(p=>({id:p.id,nombre:p.name,n:usoDe('persona',p.id).length}))},
+        {tipo:'lugar', titulo:'Lugares', items:PLACES.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(p=>({id:p.id,nombre:p.name,n:usoDe('lugar',p.id).length}))},
+        {tipo:'etiqueta', titulo:'Etiquetas', items:Array.from(tags.keys()).sort().map(t=>({id:t,nombre:'#'+t,n:tags.get(t)}))}
+      ];
+      body.innerHTML=grupos.map(g=>'<div class="entgrupo"><div class="enth">'+g.titulo+'</div>'+
+        (g.items.length? g.items.map(it=>{
+          const clave=g.tipo+'|'+it.id;
+          if(editando===clave) return '<div class="entfila"><input type="text" class="entinput" value="'+esc(it.nombre.replace(/^#/,''))+'" data-k="'+esc(clave)+'">'+
+            '<button class="minibtn" data-ok="'+esc(clave)+'">Guardar</button></div>';
+          return '<div class="entfila"><span class="entnom">'+esc(it.nombre)+'</span>'+
+            '<span class="entn">'+it.n+'</span>'+
+            '<button class="minidel" data-ren="'+esc(clave)+'">Renombrar</button>'+
+            '<button class="chipdel'+(borrando===clave?' go':'')+'" data-del="'+esc(clave)+'">'+(borrando===clave?'borrar':'&times;')+'</button></div>';
+        }).join('') : '<div class="entvacio">Nada todavía</div>')+'</div>').join('')+
+        '<p class="sub">Al renombrar algo con un nombre que ya existe, los dos se fusionan en uno. Borrar solo quita el nombre: los momentos se quedan.</p>';
+
+      $$('[data-ren]',body).forEach(b=>b.addEventListener('click',()=>{ editando=b.dataset.ren; borrando=null; pinta();
+        const i=$('.entinput',body); if(i){ i.focus(); i.select(); } }));
+      $$('[data-ok]',body).forEach(b=>b.addEventListener('click',async ()=>{
+        const [tipo,...resto]=b.dataset.ok.split('|');
+        const val=$('.entinput',body).value;
+        const r=await renombrarEntidad(tipo, resto.join('|'), val);
+        editando=null;
+        if(r.indexOf('fusionado:')===0) toast('Fusionado con '+r.slice(10));
+        else if(r==='vacío') toast('Necesita un nombre');
+        reindex(); pinta(); await refreshAll();
+      }));
+      $$('.entinput',body).forEach(i=>i.addEventListener('keydown',e=>{
+        if(e.key==='Enter'){ e.preventDefault(); $('[data-ok]',body).click(); }
+        if(e.key==='Escape'){ editando=null; pinta(); }
+      }));
+      $$('[data-del]',body).forEach(b=>b.addEventListener('click',async ()=>{
+        const clave=b.dataset.del;
+        if(borrando!==clave){ borrando=clave; editando=null; pinta(); return; }
+        borrando=null;
+        const [tipo,...resto]=clave.split('|');
+        const id=resto.join('|');
+        const n=usoDe(tipo,id).length;
+        await borrarEntidad(tipo,id);
+        reindex(); pinta(); await refreshAll();
+        toast('Borrado'+(n?' de '+n+' momento'+(n===1?'':'s'):''));
+      }));
+    };
+    pinta();
+  });
+}
 
 async function clearSeed(){
   const seeds=MOMENTS.filter(m=>m.seed);
@@ -2485,7 +2762,138 @@ async function updateNotice(){
   el.hidden=false;
   el.innerHTML='<span>'+(last? 'Hace <b>'+days+' días</b> del último respaldo.' : 'Nunca has hecho un respaldo.')+
     ' <b>'+sinBackup+'</b> sin guardar fuera.</span><button type="button">Exportar</button>';
-  $('button',el).addEventListener('click',doExport);
+  $('button',el).addEventListener('click',()=>doExport(puedeCompartirArchivos));
+}
+
+/* ------------------------------------------------------------------ *
+ * Bloqueo
+ *
+ * Esto es una puerta, no una caja fuerte: tapa el caso real de que alguien
+ * coja tu móvil desbloqueado y abra la app. Los datos siguen sin cifrar en
+ * IndexedDB, así que no protege contra un análisis forense del teléfono.
+ * Prefiero decirlo a vender lo que no es.
+ *
+ * El PIN es obligatorio aunque uses Face ID, porque un fallo aquí te deja
+ * fuera de tu propio diario y no hay servidor que te lo devuelva.
+ * ------------------------------------------------------------------ */
+let bloqueoCfg=null, desbloqueado=false;
+
+async function cargarBloqueo(){ bloqueoCfg = (await metaGet('lock')) || null; }
+const sha256 = async txt => {
+  const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ttrNow$'+txt));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
+};
+const hayBiometria = () => !!(window.PublicKeyCredential && navigator.credentials && location.protocol==='https:');
+
+async function crearLlaveBiometrica(){
+  const reto=crypto.getRandomValues(new Uint8Array(32));
+  const id=crypto.getRandomValues(new Uint8Array(16));
+  const cred=await navigator.credentials.create({publicKey:{
+    challenge:reto,
+    rp:{name:'ttrNow', id:location.hostname},
+    user:{id, name:'diario', displayName:'Mi diario'},
+    pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+    authenticatorSelection:{authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred'},
+    timeout:60000, attestation:'none'
+  }});
+  if(!cred) throw new Error('sin credencial');
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(cred.rawId)));
+}
+async function pedirBiometria(credB64){
+  const reto=crypto.getRandomValues(new Uint8Array(32));
+  const raw=Uint8Array.from(atob(credB64), c=>c.charCodeAt(0));
+  const r=await navigator.credentials.get({publicKey:{
+    challenge:reto, timeout:60000, userVerification:'required',
+    allowCredentials:[{type:'public-key', id:raw}]
+  }});
+  return !!r;
+}
+
+function pantallaBloqueo(){
+  return new Promise(res=>{
+    const el=document.createElement('div');
+    el.id='cerrojo';
+    el.innerHTML='<div class="cj">'+
+      '<div class="cjmarca" aria-hidden="true"><svg class="gl"><use href="#g-hito"/></svg></div>'+
+      '<h1>ttrNow</h1>'+
+      '<p id="cjmsg">Tu diario está cerrado</p>'+
+      (bloqueoCfg.cred?'<button class="save" id="cjbio">Abrir con Face ID</button>':'')+
+      '<input type="password" id="cjpin" inputmode="numeric" autocomplete="off" placeholder="PIN" aria-label="PIN">'+
+      '<button class="ghostbtn" id="cjok">Abrir con el PIN</button></div>';
+    document.body.appendChild(el);
+    const msg=$('#cjmsg',el);
+    const abrir=()=>{ el.remove(); desbloqueado=true; res(true); };
+    const bio=async ()=>{
+      try{ if(await pedirBiometria(bloqueoCfg.cred)) abrir(); }
+      catch(err){ msg.textContent='Face ID no ha ido. Usa el PIN'; }
+    };
+    if($('#cjbio',el)){ $('#cjbio',el).addEventListener('click',bio); setTimeout(bio,350); }
+    const probar=async ()=>{
+      const v=$('#cjpin',el).value.trim();
+      if(!v) return;
+      if(await sha256(v)===bloqueoCfg.pin) abrir();
+      else { msg.textContent='Ese PIN no es'; $('#cjpin',el).value=''; $('#cjpin',el).focus(); }
+    };
+    $('#cjok',el).addEventListener('click',probar);
+    $('#cjpin',el).addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); probar(); } });
+  });
+}
+
+/* al volver a la app después de un rato, vuelve a pedirlo */
+let salidaEn=0;
+document.addEventListener('visibilitychange', async ()=>{
+  if(!bloqueoCfg) return;
+  if(document.hidden){ salidaEn=Date.now(); return; }
+  const espera=(bloqueoCfg.tras||0)*1000;
+  if(desbloqueado && salidaEn && Date.now()-salidaEn>espera && !$('#cerrojo')){
+    desbloqueado=false;
+    document.body.classList.add('tapado');
+    await pantallaBloqueo();
+    document.body.classList.remove('tapado');
+  }
+});
+
+function configurarBloqueo(){
+  openSheet(bloqueoCfg?'Bloqueo':'Poner un bloqueo', body=>{
+    if(bloqueoCfg){
+      body.innerHTML='<p class="sub" style="margin-top:0">El diario se abre con '+
+        (bloqueoCfg.cred?'Face ID o con el PIN':'el PIN')+
+        ', y vuelve a pedirlo '+(bloqueoCfg.tras? 'si pasan más de '+(bloqueoCfg.tras/60)+' min fuera':'cada vez que sales')+'.</p>'+
+        '<button class="ghostbtn danger" id="lk-off">Quitar el bloqueo</button>';
+      $('#lk-off',body).addEventListener('click',async ()=>{
+        await metaSet('lock', null); bloqueoCfg=null; closeSheet(); toast('Bloqueo quitado');
+      });
+      return;
+    }
+    body.innerHTML=
+      '<div class="f"><label for="lk-pin">PIN (4 cifras o más)</label>'+
+        '<input type="password" id="lk-pin" inputmode="numeric" autocomplete="off" placeholder="El que no se te olvide"></div>'+
+      '<div class="f"><label for="lk-pin2">Repítelo</label>'+
+        '<input type="password" id="lk-pin2" inputmode="numeric" autocomplete="off"></div>'+
+      '<div class="f"><label for="lk-tras">Volver a pedirlo</label>'+
+        '<select id="lk-tras"><option value="0">Cada vez que salgo</option>'+
+        '<option value="120" selected>Si paso 2 minutos fuera</option>'+
+        '<option value="900">Si paso 15 minutos fuera</option></select></div>'+
+      (hayBiometria()?'<label class="lblrow" style="margin:14px 0 6px"><span style="font-size:13.5px;letter-spacing:0;text-transform:none;color:var(--ink)">Abrir también con Face ID</span>'+
+        '<input type="checkbox" id="lk-bio" checked style="width:auto"></label>':'')+
+      '<button class="save" id="lk-on">Activar</button>'+
+      '<p class="sub"><b>Apúntate el PIN donde apuntas las cosas importantes.</b> Si lo pierdes y Face ID falla, no hay forma de entrar: no existe un servidor que te lo devuelva, y tu diario solo está aquí.<br><br>'+
+      'Esto es una puerta, no una caja fuerte: impide que alguien con tu móvil en la mano abra la app, pero los datos siguen sin cifrar dentro del teléfono.</p>';
+    $('#lk-on',body).addEventListener('click',async ()=>{
+      const a=$('#lk-pin',body).value.trim(), b=$('#lk-pin2',body).value.trim();
+      if(a.length<4){ toast('Al menos 4 cifras'); return; }
+      if(a!==b){ toast('Los dos PIN no coinciden'); return; }
+      const cfg={pin:await sha256(a), tras:+$('#lk-tras',body).value, cred:null};
+      const quiereBio=$('#lk-bio',body) && $('#lk-bio',body).checked;
+      if(quiereBio){
+        try{ cfg.cred=await crearLlaveBiometrica(); }
+        catch(err){ toast('Face ID no se pudo activar; queda el PIN', 3800); }
+      }
+      await metaSet('lock', cfg); bloqueoCfg=cfg; desbloqueado=true;
+      closeSheet();
+      toast(cfg.cred?'Bloqueo activado con Face ID y PIN':'Bloqueo activado con PIN');
+    });
+  }, {focus:true});
 }
 
 /* ------------------------------------------------------------------ *
@@ -2795,6 +3203,13 @@ async function init(){
 
   if(navigator.storage && navigator.storage.persist){
     try{ if(!(await navigator.storage.persisted())) await navigator.storage.persist(); }catch(e){}
+  }
+  /* el cerrojo, antes de pintar nada del diario */
+  await cargarBloqueo();
+  if(bloqueoCfg){
+    document.body.classList.add('tapado');
+    await pantallaBloqueo();
+    document.body.classList.remove('tapado');
   }
   await loadAll();
   if(!MOMENTS.length && !(await metaGet('seeded'))){
