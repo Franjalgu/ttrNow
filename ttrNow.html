@@ -168,12 +168,20 @@ body.reading #year,body.reading #yearSub{opacity:0}
   box-shadow:0 0 10px rgba(198,161,91,.55);
   transition:transform .09s,background .09s,border-color .09s,box-shadow .09s}
 .row.hito.at .node{transform:scale(1.3)}
-.row.at .tstamp{color:var(--ink);transition:color .09s}
+.tday,.twd,.thour{transition:color .28s}
+.row.at .tday,.row.at .twd,.row.at .thour{transition:color .09s}
 .row.at .tick{background:rgba(198,161,91,.45);transition:background .09s}
-.tstamp{position:absolute;top:11px;font-size:10.5px;letter-spacing:.06em;color:var(--faint);
-  font-variant-numeric:tabular-nums;transition:opacity .3s;white-space:nowrap}
-.row.l .tstamp{left:calc(50% + 14px)}
-.row.r .tstamp{right:calc(50% + 14px)}
+.tstamp{position:absolute;top:8px;font-variant-numeric:tabular-nums;line-height:1.1;
+  white-space:nowrap;transition:opacity .3s}
+.row.l .tstamp{left:calc(50% + 14px);text-align:left}
+.row.r .tstamp{right:calc(50% + 14px);text-align:right}
+.tday{font-size:15px;color:rgba(233,229,221,.7);letter-spacing:.01em}
+.twd{font-size:10.5px;color:var(--faint);letter-spacing:.08em;margin-left:4px}
+.thour{display:block;margin-top:2px;font-size:9.5px;letter-spacing:.09em;color:rgba(233,229,221,.24)}
+.row.hito .tday{color:rgba(198,161,91,.9)}
+.row.efem .tday{color:rgba(233,229,221,.4);font-size:13px}
+.row.at .tday{color:var(--ink)}
+.row.at .thour,.row.at .twd{color:var(--dim)}
 .tick{position:absolute;top:17px;height:1px;background:rgba(233,229,221,.16);transition:opacity .3s}
 .row.l .tick{right:50%;width:calc(var(--gap)/2)}
 .row.r .tick{left:50%;width:calc(var(--gap)/2)}
@@ -509,6 +517,7 @@ const norm = s => (s||'').toString().toLowerCase()
 const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const MES3 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const DIAS3 = ['dom','lun','mar','mié','jue','vie','sáb'];
 
 const pad = n => String(n).padStart(2,'0');
 const fmtHora = d => pad(d.getHours())+':'+pad(d.getMinutes());
@@ -1089,10 +1098,16 @@ function makeRow(e, idx){
 
   const node=document.createElement('div'); node.className='node'; node.setAttribute('aria-hidden','true');
   const tick=document.createElement('div'); tick.className='tick'; tick.setAttribute('aria-hidden','true');
+  /* Lo que importa de un recuerdo es el día, no la hora: el mes y el año ya
+     están siempre a la vista arriba, así que aquí manda el número del día y
+     el día de la semana, y la hora queda de acompañante. */
   const st=document.createElement('div'); st.className='tstamp';
-  st.textContent = m.type==='efemeride'
+  const abajo = m.type==='efemeride'
     ? (e.n===0 ? 'origen' : 'hace '+e.n+(e.n===1?' año':' años'))
     : fmtHora(e.d);
+  st.innerHTML='<span class="tday">'+e.d.getDate()+'</span>'+
+    '<span class="twd">'+DIAS3[e.d.getDay()]+'</span>'+
+    '<span class="thour">'+esc(abajo)+'</span>';
 
   const card=document.createElement('article');
   card.className='card'; card.tabIndex=0; card.setAttribute('role','button'); card.setAttribute('aria-expanded','false');
