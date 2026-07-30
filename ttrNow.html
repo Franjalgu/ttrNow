@@ -148,6 +148,21 @@ body.reading #year,body.reading #yearSub{opacity:0}
   background:radial-gradient(closest-side ellipse at 50% 50%, var(--skyMid) 45%, rgba(0,0,0,0) 100%)}
 .msep.year span{color:var(--brass);letter-spacing:.3em}
 .msep.gone{display:none}
+/* la franja de un viaje: cálida, por detrás de todo, con su etiqueta arriba */
+.periodo{position:absolute;left:-8px;right:-8px;z-index:0;pointer-events:none;border-radius:18px;
+  background:linear-gradient(180deg,rgba(198,161,91,.13),rgba(198,161,91,.055) 22%,
+    rgba(198,161,91,.055) 78%,rgba(198,161,91,.12));
+  border:1px solid rgba(198,161,91,.2);
+  box-shadow:inset 0 0 70px rgba(198,161,91,.06)}
+.periodoet{position:absolute;top:0;left:50%;transform:translate(-50%,-50%);
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;max-width:86%;overflow:hidden;
+  background:var(--skyMid);border:1px solid rgba(198,161,91,.34);border-radius:99px;
+  padding:4px 13px;font-size:9.5px;letter-spacing:.19em;text-transform:uppercase;color:var(--brass)}
+.periodoet .gl{width:12px;height:12px;flex:none}
+.row.viaje .node{width:12px;height:12px;margin-left:-6px;top:12px;
+  border-color:var(--brass);background:var(--skyMid);box-shadow:0 0 0 3px rgba(198,161,91,.16)}
+.row.viaje .card{border-color:rgba(198,161,91,.32)}
+.rango{color:var(--brass)}
 
 .row{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:var(--gap);
   margin:16px 0;transition:grid-template-columns .42s var(--ease),column-gap .42s var(--ease),margin .3s var(--ease),opacity .3s;
@@ -631,9 +646,15 @@ let PMAP=new Map(), LMAP=new Map(), TMAP=new Map();
 const TYPES = {
   momento:  {label:'Momento',   hint:'lo normal del día a día'},
   hito:     {label:'Hito',      hint:'nacimientos, muertes, mudanzas, bodas'},
+  viaje:    {label:'Viaje',     hint:'un tramo entero de la línea, con sus días'},
   ficha:    {label:'Ficha',     hint:'algo que puede repetirse'},
   efemeride:{label:'Efeméride', hint:'se repite cada año'}
 };
+/* El viaje no es un punto sino un periodo: tiene campos propios como una
+   ficha, pero además ocupa un tramo de la línea. */
+const VIAJE = {g:'viaje', label:'Viaje', fields:[
+  {k:'destino',l:'Destino'},{k:'conquien',l:'Con quién'},
+  {k:'donde',l:'Dónde dormimos'},{k:'quedarme',l:'Lo que me quedo'}]};
 
 const PRESETS = {
   vino:      {g:'vino', label:'Vino', fields:[
@@ -656,8 +677,6 @@ const PRESETS = {
                 {k:'artista',l:'Artista'},{k:'sala',l:'Sala'},{k:'conquien',l:'Con quién'},{k:'nota',l:'Nota',type:'rating'}]},
   pelicula:  {g:'pelicula', label:'Película o serie', fields:[
                 {k:'director',l:'Dirección'},{k:'donde',l:'Dónde'},{k:'conquien',l:'Con quién'},{k:'nota',l:'Nota',type:'rating'}]},
-  viaje:     {g:'viaje', label:'Viaje', fields:[
-                {k:'destino',l:'Destino'},{k:'dias',l:'Días'},{k:'conquien',l:'Con quién'},{k:'quedarme',l:'Lo que me quedo'}]},
   receta:    {g:'receta', label:'Receta', fields:[
                 {k:'ingredientes',l:'Ingredientes'},{k:'punto',l:'El truco'},{k:'nota',l:'Nota',type:'rating'}]},
   ruta:      {g:'ruta', label:'Ruta o paseo', fields:[
@@ -671,7 +690,7 @@ const PRESETS = {
 function newMoment(over){
   const now=new Date();
   return Object.assign({
-    id: uid(), datetime: now.toISOString(), type:'momento', preset:null, thingId:null,
+    id: uid(), datetime: now.toISOString(), end:null, type:'momento', preset:null, thingId:null,
     title:'', note:'', tags:[], peopleIds:[], placeId:null,
     photos:[], audio:[], fields:{},
     createdAt: now.toISOString(), updatedAt: now.toISOString()
@@ -1124,6 +1143,7 @@ const IC={ mic:gl('mic'), pin:gl('pin'), ppl:gl('ppl'), tag:gl('tag') };
 /* el glifo que identifica el momento de un vistazo */
 function glyphOf(m){
   if(m.type==='hito') return 'hito';
+  if(m.type==='viaje') return 'viaje';
   if(m.type==='efemeride') return 'efemeride';
   if(m.type==='ficha' && m.preset && PRESETS[m.preset]) return PRESETS[m.preset].g;
   return null;
@@ -1132,11 +1152,29 @@ function kindOf(m){
   if(m.type==='ficha' && m.preset && PRESETS[m.preset]) return PRESETS[m.preset].label;
   return TYPES[m.type] ? TYPES[m.type].label : m.type;
 }
+/* el viaje ocupa días: fin, duración y cómo se escribe el tramo */
+const finDe = m => (m.type==='viaje' && m.end) ? new Date(m.end) : null;
+function diasDe(m){
+  const f=finDe(m); if(!f) return 1;
+  const a=new Date(m.datetime);
+  return Math.max(1, Math.round((new Date(f.getFullYear(),f.getMonth(),f.getDate())
+    - new Date(a.getFullYear(),a.getMonth(),a.getDate()))/864e5)+1);
+}
+function rangoDe(m){
+  const a=new Date(m.datetime), f=finDe(m);
+  if(!f) return '';
+  if(a.getMonth()===f.getMonth() && a.getFullYear()===f.getFullYear())
+    return a.getDate()+'–'+f.getDate()+' '+MES3[f.getMonth()];
+  if(a.getFullYear()===f.getFullYear())
+    return a.getDate()+' '+MES3[a.getMonth()]+' – '+f.getDate()+' '+MES3[f.getMonth()];
+  return a.getDate()+' '+MES3[a.getMonth()]+' '+a.getFullYear()+' – '+f.getDate()+' '+MES3[f.getMonth()]+' '+f.getFullYear();
+}
 
 function makeRow(e, idx){
   const m=e.m;
   const row=document.createElement('div');
-  row.className='row '+(idx%2 ? 'r':'l')+(m.type==='hito'?' hito':'')+(m.type==='efemeride'?' efem':'');
+  row.className='row '+(idx%2 ? 'r':'l')+(m.type==='hito'?' hito':'')+
+    (m.type==='efemeride'?' efem':'')+(m.type==='viaje'?' viaje':'');
   row.dataset.key=e.key;
   row.setAttribute('role','article');
 
@@ -1162,6 +1200,7 @@ function makeRow(e, idx){
 
   const meta=[];
   if(m.type==='efemeride') meta.push('<span class="kind">Cada año</span>');
+  if(m.type==='viaje' && m.end) meta.push('<span class="kind rango">'+esc(rangoDe(m))+' · '+diasDe(m)+' días</span>');
   if((m.audio||[]).length) meta.push('<span class="mi">'+IC.mic+'</span>');
   if(m.placeId) meta.push('<span class="mi">'+IC.pin+esc(placeName(m.placeId))+'</span>');
   if((m.peopleIds||[]).length) meta.push('<span class="mi">'+IC.ppl+esc(m.peopleIds.map(personName).filter(Boolean).slice(0,2).join(', '))+((m.peopleIds.length>2)?' +'+(m.peopleIds.length-2):'')+'</span>');
@@ -1234,15 +1273,18 @@ function renderMore(n){
   drawn=end;
   rowsEl.appendChild(frag);
   if(matchSet) paintSeps();
+  programarPeriodos();
   $('#endcap').hidden = drawn<ENTRIES.length || !ENTRIES.length;
   return drawn<ENTRIES.length;
 }
 function resetTimeline(){
+  calcularPeriodos();
   for(const [k,v] of rowIndex){ unobserveRow(v.el); }
   rowIndex.clear(); rowsEl.textContent=''; drawn=0; lastKeyMonth=null;
   $('#empty').hidden = ENTRIES.length>0;
   $('#endcap').hidden = true;
   renderMore(CHUNK*2);
+  programarPeriodos();
 }
 
 /* observadores: miniaturas, banda de lectura, sentinela */
@@ -1304,6 +1346,60 @@ function unobserveRow(row){
   $$('img[data-mid]',row).forEach(i=>{ thumbIO.unobserve(i); if(i._loaded){ releaseURL(i.dataset.mid); i._loaded=false; } });
 }
 
+/* ------------------------------------------------------------------ *
+ * Franjas de viaje: un viaje no es un punto, es un tramo de vida. Se
+ * pinta como una banda cálida por detrás de todas las filas que caen
+ * dentro de sus fechas, para que se vea de lejos que ahí estabas fuera.
+ * ------------------------------------------------------------------ */
+let PERIODOS=[], periodoRaf=null;
+/* qué entradas caen dentro de cada viaje: se calcula al cambiar la línea */
+function calcularPeriodos(){
+  PERIODOS=MOMENTS.filter(m=>m.type==='viaje' && m.end).map(v=>{
+    const ini=new Date(v.datetime).getTime();
+    const f=new Date(v.end);
+    const fin=new Date(f.getFullYear(),f.getMonth(),f.getDate(),23,59,59,999).getTime();
+    return {v, claves:ENTRIES.filter(e=>e.t>=ini-1 && e.t<=fin+1).map(e=>e.key)};
+  }).filter(p=>p.claves.length);
+}
+function programarPeriodos(){
+  if(periodoRaf) return;
+  periodoRaf=requestAnimationFrame(()=>{ periodoRaf=null; pintarPeriodos(); });
+}
+/* Las alturas se leen en cada pasada y no se cachean: con
+   content-visibility, una fila que aún no se ha pintado mide lo estimado,
+   así que la franja hay que recolocarla cuando el alto real aparece. */
+function pintarPeriodos(){
+  const previas=$$('.periodo', rowsEl);
+  if(!PERIODOS.length){ previas.forEach(e=>e.remove()); return; }
+  let i=0;
+  for(const p of PERIODOS){
+    let arriba=Infinity, abajo=-Infinity, cuantas=0;
+    for(const k of p.claves){
+      const val=rowIndex.get(k); if(!val) continue;
+      const el=val.el;
+      if(el.classList.contains('dim')) continue;
+      arriba=Math.min(arriba, el.offsetTop);
+      abajo=Math.max(abajo, el.offsetTop+el.offsetHeight);
+      cuantas++;
+    }
+    if(!cuantas) continue;
+    let b=previas[i];
+    if(!b){
+      b=document.createElement('div');
+      b.className='periodo'; b.setAttribute('aria-hidden','true');
+      b.innerHTML='<span class="periodoet"></span>';
+      rowsEl.appendChild(b);
+      previas[i]=b;
+    }
+    b.style.top=(arriba-16)+'px';
+    b.style.height=(abajo-arriba+34)+'px';
+    const et=$('.periodoet',b), txt=(p.v.title||'Viaje');
+    if(et.dataset.t!==txt){ et.dataset.t=txt; et.innerHTML=gl('viaje')+esc(txt); }
+    i++;
+  }
+  for(let j=i;j<previas.length;j++) previas[j].remove();
+}
+
 let headDate=new Date();
 const READ_LINE=.45;   // la altura de pantalla donde "se lee" la línea
 function updateHead(){
@@ -1316,6 +1412,7 @@ function updateHead(){
     if(d<bestD){ bestD=d; best=v; }
   }
   if(!best) return;
+  programarPeriodos();          // las alturas reales llegan al desplazar
   headDate=best.e.d;
   setYear(headDate.getFullYear());
   setSub(SEASON_NAME[seasonOf(headDate)]+' · '+fmtMes(headDate));
@@ -1338,6 +1435,7 @@ async function toggleRow(row, e, forceClose){
     releaseDetail(card);
     openRow=null;
     document.body.classList.remove('reading');
+    setTimeout(programarPeriodos, reduced?0:480);
     return;
   }
   if(openRow && openRow!==row) toggleRow(openRow, rowIndex.get(openRow.dataset.key).e, true);
@@ -1357,6 +1455,7 @@ async function toggleRow(row, e, forceClose){
     if(r.top<target-2 || r.height>window.innerHeight-target-70 || r.bottom>window.innerHeight-20)
       withoutSnap(()=>window.scrollBy({top:r.top-target, behavior:reduced?'auto':'smooth'}));
   }, reduced?0:280);
+  setTimeout(programarPeriodos, reduced?0:480);
 }
 function releaseDetail(card){
   $$('img[data-full],audio[data-mid]',card).forEach(el=>{
@@ -1374,7 +1473,9 @@ async function buildDetail(e, row){
   const bits=[], g=glyphOf(m);
   bits.push('<div class="dhead">'+
     (g?'<span class="dkind">'+gl(g)+esc(kindOf(m))+'</span>':'')+
-    '<span class="dwhen">'+esc(fmtFechaLarga(e.d))+' · '+esc(fmtHora(e.d))+
+    '<span class="dwhen">'+(m.type==='viaje'&&m.end
+      ? 'Del '+esc(fmtFechaLarga(e.d))+' al '+esc(fmtFechaLarga(finDe(m)))+' · '+diasDe(m)+' días'
+      : esc(fmtFechaLarga(e.d))+' · '+esc(fmtHora(e.d)))+
     (m.type==='efemeride' && e.n>0 ? ' · hace '+e.n+(e.n===1?' año':' años') : '')+'</span></div>');
   if(m.note) bits.push('<p class="dnote">'+esc(m.note)+'</p>');
 
@@ -1383,8 +1484,10 @@ async function buildDetail(e, row){
     bits.push('<div class="aud"><audio controls preload="metadata" data-mid="'+esc(au.id)+'"></audio>'+
       (au.dur?'<span class="adur">'+esc(fmtDur(au.dur))+'</span>':'')+'</div>');
 
-  if(m.type==='ficha' && m.preset && PRESETS[m.preset]){
-    const fs=PRESETS[m.preset].fields.filter(f=>m.fields && m.fields[f.k]!=null && m.fields[f.k]!=='');
+  const defs = m.type==='viaje' ? VIAJE
+    : (m.type==='ficha' && m.preset && PRESETS[m.preset]) ? PRESETS[m.preset] : null;
+  if(defs){
+    const fs=defs.fields.filter(f=>m.fields && m.fields[f.k]!=null && m.fields[f.k]!=='');
     if(fs.length){
       bits.push('<dl class="fields">'+fs.map(f=>{
         const v=m.fields[f.k];
@@ -1409,6 +1512,7 @@ async function buildDetail(e, row){
   }
   bits.push('<div class="dactions">'+
       '<button data-act="edit">Editar</button>'+
+      ((m.photos||[]).length>1?'<button data-act="split">Separar fotos</button>':'')+
       (m.type!=='efemeride'?'<button data-act="dup">Repetir hoy</button>':'')+
       '<button data-act="del" class="del">Borrar</button>'+
     '</div>');
@@ -1445,6 +1549,7 @@ async function buildDetail(e, row){
       openEditor(copy, true);
     }
     if(act==='del') confirmDelete(m);
+    if(act==='split') separarFotos(m);
   });
 
   /* gesto hacia abajo para cerrar */
@@ -2020,7 +2125,9 @@ function openEditor(moment, isNew){
       '<div class="f"><label for="e-title">Título</label>'+
         '<input type="text" id="e-title" placeholder="Una frase basta" autocomplete="off"></div>'+
       '<div class="f"><label for="e-note">Nota</label><textarea id="e-note" placeholder="Lo que quieras recordar de esto"></textarea></div>'+
-      '<div class="f"><label for="e-dt">Cuándo</label><input type="datetime-local" id="e-dt"></div>'+
+      '<div class="f"><label for="e-dt" id="e-dtl">Cuándo</label><input type="datetime-local" id="e-dt"></div>'+
+      '<div class="f" id="endWrap" hidden><label for="e-end">Hasta</label>'+
+        '<input type="date" id="e-end"><div class="hint" id="e-dias"></div></div>'+
       '<div id="e-fields"></div>'+
       '<div class="tools">'+
         '<button type="button" class="tool" data-t="place"><svg viewBox="0 0 24 24"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Lugar</button>'+
@@ -2058,7 +2165,7 @@ function openEditor(moment, isNew){
       $$('[data-type]',body).forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.type===m.type)));
       $('#presetWrap',body).hidden = m.type!=='ficha';
       if(m.type==='ficha' && !m.preset) m.preset='vino';
-      markPreset(); drawFields();
+      markPreset(); drawFields(); pintaTramo();
     }));
     $('#presetWrap',body).hidden = m.type!=='ficha';
     function markPreset(){
@@ -2069,10 +2176,27 @@ function openEditor(moment, isNew){
       m.preset=b.dataset.preset; markPreset(); drawFields();
     }));
 
+    /* el tramo del viaje */
+    const endWrap=$('#endWrap',body), endIn=$('#e-end',body);
+    if(m.end){ const f=new Date(m.end); endIn.value=f.getFullYear()+'-'+pad(f.getMonth()+1)+'-'+pad(f.getDate()); }
+    function pintaTramo(){
+      const esViaje=m.type==='viaje';
+      endWrap.hidden=!esViaje;
+      $('#e-dtl',body).textContent=esViaje?'Desde':'Cuándo';
+      if(!esViaje) return;
+      const a=dt.value?new Date(dt.value):null, f=endIn.value?new Date(endIn.value+'T12:00'):null;
+      $('#e-dias',body).textContent = (a&&f&&!isNaN(a)&&!isNaN(f))
+        ? (f<a ? 'La vuelta es antes que la ida' : diasDe({type:'viaje',datetime:a.toISOString(),end:f.toISOString()})+' días')
+        : 'Si lo dejas vacío, será de un solo día';
+    }
+    endIn.addEventListener('input',pintaTramo);
+    dt.addEventListener('input',pintaTramo);
+
     function drawFields(){
       const box=$('#e-fields',body);
-      if(m.type!=='ficha' || !m.preset || !PRESETS[m.preset]){ box.innerHTML=''; return; }
-      const p=PRESETS[m.preset];
+      const p = m.type==='viaje' ? VIAJE
+        : (m.type==='ficha' && m.preset && PRESETS[m.preset]) ? PRESETS[m.preset] : null;
+      if(!p){ box.innerHTML=''; return; }
       box.innerHTML=p.fields.map(f=>{
         const v=m.fields[f.k]||'';
         if(f.type==='rating'){
@@ -2091,6 +2215,7 @@ function openEditor(moment, isNew){
       }));
     }
     drawFields();
+    pintaTramo();
 
     /* herramientas que revelan campos */
     $$('[data-t]',body).forEach(b=>b.addEventListener('click',()=>{
@@ -2343,6 +2468,11 @@ function openEditor(moment, isNew){
       const d=dt.value? new Date(dt.value) : new Date();
       if(isNaN(d)){ toast('Esa fecha no vale'); return; }
       m.datetime=d.toISOString();
+      if(m.type==='viaje'){
+        let f=endIn.value? new Date(endIn.value+'T20:00') : new Date(d);
+        if(isNaN(f) || f<d) f=new Date(d);
+        m.end=f.toISOString();
+      } else m.end=null;
       const pl=$('#e-place',body).value.trim();
       m.placeId = pl ? await ensurePlace(pl) : null;
       const pending=$('#e-person',body).value.trim();
@@ -2373,6 +2503,33 @@ function openEditor(moment, isNew){
     const delBtn=$('#e-del',body);
     if(delBtn) delBtn.addEventListener('click',()=>{ saved=true; closeSheet(); confirmDelete(m); });
   }, {focus:isNew, onClose});
+}
+
+/* Deshacer un agrupado que no era: cada foto se va a su propio momento,
+   heredando fecha, sitio, gente y etiquetas. No se pierde ninguna. */
+function separarFotos(m){
+  const n=(m.photos||[]).length;
+  confirmSheet('¿Separar las '+n+' fotos?',
+    'Se quedan '+n+' momentos, uno por foto, con la misma fecha y los mismos datos. Luego puedes cambiarles la fecha una a una.',
+    'Separar', async ()=>{
+      const [primera,...resto]=m.photos;
+      m.photos=[primera];
+      await guardarMomento(m);
+      const idx=MOMENTS.findIndex(x=>x.id===m.id);
+      if(idx>=0) MOMENTS[idx]=m;
+      for(const ph of resto){
+        const nuevo=newMoment({
+          datetime:m.datetime, type:m.type==='viaje'?'momento':m.type, preset:m.preset, thingId:m.thingId,
+          title:m.title, note:'', tags:(m.tags||[]).slice(), peopleIds:(m.peopleIds||[]).slice(),
+          placeId:m.placeId, photos:[ph], fields:Object.assign({},m.fields||{})
+        });
+        delete nuevo._doc; delete nuevo._toks;
+        await dbPut('moments', nuevo);
+        MOMENTS.push(nuevo);
+      }
+      await refreshAll(m.id);
+      toast(n+' momentos, uno por foto');
+    });
 }
 
 function confirmDelete(m){
@@ -2448,7 +2605,7 @@ async function doExport(compartir){
     _version:1,
     _doc:{
       que:'Respaldo completo de un diario ttrNow. Formato abierto: este zip contiene data.json y una carpeta media/ con las fotos y audios.',
-      moments:'Cada momento: id (uuid), datetime (ISO 8601 local convertido a UTC), type (momento|hito|ficha|efemeride), preset (clave de ficha), thingId, title, note, tags[], peopleIds[], placeId, photos[{id,thumbId,w,h,takenAt,alt}], audio[{id,dur,mime}], fields{}, createdAt, updatedAt.',
+      moments:'Cada momento: id (uuid), datetime (ISO 8601 local convertido a UTC), end (solo en los viajes: fin del tramo), type (momento|hito|viaje|ficha|efemeride), preset (clave de ficha), thingId, title, note, tags[], peopleIds[], placeId, photos[{id,thumbId,w,h,takenAt,alt}], audio[{id,dur,mime}], fields{}, createdAt, updatedAt.',
       entidades:'people/places/things son entidades reutilizables {id,name,key,(kind)}. key es el nombre normalizado sin acentos.',
       media:'Cada entrada de media apunta a un archivo dentro de media/. kind: photo (1600px máx), thumb (400px, la que pinta la línea de tiempo) o audio (mono).',
       efemerides:'Un momento de tipo efemeride se repite cada año a partir de su datetime original.'
@@ -2577,9 +2734,9 @@ async function renombrarEntidad(tipo, id, nuevo){
     const limpio=nuevo.replace(/^#/,'');
     for(const m of MOMENTS){
       if(!(m.tags||[]).length) continue;
-      const antes=m.tags.join(' ');
+      const antes=m.tags.join(' ');
       m.tags=Array.from(new Set(m.tags.map(t=>t===id?limpio:t)));
-      if(m.tags.join(' ')!==antes) await guardarMomento(m);
+      if(m.tags.join(' ')!==antes) await guardarMomento(m);
     }
     return 'ok';
   }
@@ -2638,18 +2795,25 @@ function importarFotos(){
     };
     /* primero las fechas, para poder agrupar antes de comprimir nada */
     const conFecha=[];
+    let sinExif=0;
     for(const f of files){
-      let cuando=await exifDate(f);
+      const exif=await exifDate(f);
+      let cuando=exif;
       if(!cuando && f.lastModified) cuando=new Date(f.lastModified);
-      conFecha.push({file:f, t:(cuando&&!isNaN(cuando))?cuando.getTime():Date.now()});
+      if(!exif) sinExif++;
+      conFecha.push({file:f, t:(cuando&&!isNaN(cuando))?cuando.getTime():Date.now(), fiable:!!exif});
       hechas++; paso(hechas);
       if(hechas%4===0) await new Promise(r=>setTimeout(r,0));
     }
     conFecha.sort((a,b)=>a.t-b.t);
+    /* Solo agrupo por cercanía cuando la fecha viene del EXIF, es decir, de
+       cuando se hizo la foto. La fecha del archivo es la de la descarga: si
+       te bajaste doce fotos de golpe, parecen simultáneas y no lo son. */
     const tandas=[];
     for(const x of conFecha){
       const ult=tandas[tandas.length-1];
-      if(ult && x.t-ult[ult.length-1].t<=HUECO_TANDA) ult.push(x);
+      const previo=ult && ult[ult.length-1];
+      if(previo && previo.fiable && x.fiable && x.t-previo.t<=HUECO_TANDA) ult.push(x);
       else tandas.push([x]);
     }
     hechas=0;
@@ -2675,7 +2839,9 @@ function importarFotos(){
     panel.remove();
     await refreshAll(ultimoId);
     const n=tandas.length;
-    toast(n+' momento'+(n===1?'':'s')+' desde '+total+' foto'+(total===1?'':'s')+'. Ponles título cuando quieras', 5200);
+    toast(n+' momento'+(n===1?'':'s')+' desde '+total+' foto'+(total===1?'':'s')+
+      (sinExif? ' · '+sinExif+' sin fecha de captura, van sueltas':'')+
+      '. Ponles título cuando quieras', 6000);
   });
 }
 
@@ -2926,6 +3092,10 @@ const SEED=[
  {d:'2019-03-21T19:40', t:'hito', title:'Nos mudamos a Rosales',
   note:'Dormimos en el suelo, entre cajas, con la persiana rota. Marta dijo que esta casa olía a principio de algo.',
   tags:['casa','mudanza'], people:['Marta'], place:'Rosales', img:'primavera'},
+ {d:'2019-08-10T11:00', t:'viaje', end:'2019-08-17T20:00', title:'Semana en la costa',
+  note:'Ocho días sin mirar el reloj. Volvimos con arena en todo.',
+  fields:{destino:'Cabo de Gata', conquien:'Marta y Nico', donde:'Una casa con el techo bajo', quedarme:'El silencio de las siete de la mañana'},
+  tags:['viajes','verano'], people:['Marta','Nico'], place:'Cabo de Gata', img:'verano'},
  {d:'2019-08-14T23:55', title:'Baño de noche en la cala',
   note:'El agua estaba más caliente que el aire. Se veía el plancton al mover los brazos.',
   tags:['verano','mar'], people:['Marta','Nico'], place:'Cala del Moro', img:'verano'},
@@ -3003,6 +3173,7 @@ async function seedDB(){
     } else when=new Date(s.d);
     const m=newMoment({
       type: s.t||'momento', preset:s.preset||null, title:s.title, note:s.note||'',
+      end: s.end? new Date(s.end).toISOString() : null,
       tags:s.tags||[], fields:s.fields||{}, seed:true,
       datetime:when.toISOString(),
       createdAt:when.toISOString(), updatedAt:when.toISOString()
@@ -3212,6 +3383,11 @@ async function init(){
     document.body.classList.remove('tapado');
   }
   await loadAll();
+  /* los viajes eran una ficha y ahora son un tipo con días propios */
+  for(const m of MOMENTS.filter(x=>x.type==='ficha' && x.preset==='viaje')){
+    m.type='viaje'; m.preset=null; m.thingId=null; m.end=m.end||m.datetime;
+    await guardarMomento(m);
+  }
   if(!MOMENTS.length && !(await metaGet('seeded'))){
     try{ await seedDB(); }catch(e){}
     PMAP=byId(PEOPLE); LMAP=byId(PLACES); TMAP=byId(THINGS);
