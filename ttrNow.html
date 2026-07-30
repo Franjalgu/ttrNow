@@ -2423,7 +2423,9 @@ function setupPWA(){
        icono lo vas a ver todos los días en la pantalla de inicio. Si no
        están, se queda el que acabo de dibujar y todo sigue funcionando. */
     if(location.protocol==='http:'||location.protocol==='https:'){
-      fetch('./manifest.webmanifest',{method:'HEAD'}).then(r=>{
+      /* GET y no HEAD: el service worker solo intercepta GET, y con un HEAD
+         esto reventaba en consola cada vez que abrías sin cobertura */
+      fetch('./manifest.webmanifest').then(r=>{
         if(!r.ok) return;
         $('#manifestLink').href='./manifest.webmanifest';
         $('#appleIcon').href='./apple-touch-icon.png';
