@@ -437,6 +437,14 @@ body.reading #year,body.reading #yearSub{opacity:0}
 .entinput{flex:1;min-width:0;background:rgba(233,229,221,.05);border:1px solid rgba(198,161,91,.4);
   border-radius:8px;padding:7px 10px;font-size:16px;outline:none}
 .entvacio{font-size:12px;color:var(--faint);padding:8px 0}
+.ffila{display:flex;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid var(--hair)}
+.fthumb{flex:none;width:46px;height:46px;border-radius:9px;overflow:hidden;background:rgba(233,229,221,.05)}
+.fthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.fmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.ftit{font-size:12.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fmain input{width:100%;background:rgba(233,229,221,.05);border:1px solid var(--hair);
+  border-radius:8px;padding:7px 9px;font-size:16px;outline:none}
+.fmain input:focus{border-color:rgba(198,161,91,.45)}
 #progreso{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(5,6,8,.86);
   backdrop-filter:blur(4px);padding:24px}
 .pg{width:100%;max-width:320px;text-align:center}
@@ -751,47 +759,133 @@ function drawScaled(src, max, q, type){
   return new Promise(res=>c.toBlob(b=>res({blob:b,w,h}), type||BEST_TYPE, q));
 }
 
-/* Lee DateTimeOriginal del EXIF de un JPEG (sin dependencias). */
+/* Lee la fecha de un bloque TIFF (que es lo que hay dentro del EXIF, tanto
+   en un JPEG como en un HEIC). t = posición donde empieza la cabecera TIFF. */
+function fechaDesdeTiff(v, t){
+  const le = v.getUint16(t)===0x4949;
+  const g16=(p)=>v.getUint16(p,le), g32=(p)=>v.getUint32(p,le);
+  let ifd=t+g32(t+4);
+  let suelta=null;
+  const scan=(p)=>{
+    const n=g16(p);
+    for(let i=0;i<n;i++){
+      const e=p+2+i*12, tag=g16(e);
+      if(tag===0x8769) return {sub:t+g32(e+8)};
+      if(tag===0x9003||tag===0x0132||tag===0x9004){
+        const cnt=g32(e+4), vo=cnt>4? t+g32(e+8) : e+8;
+        let s='';
+        for(let j=0;j<Math.min(cnt,20);j++){ const ch=v.getUint8(vo+j); if(!ch)break; s+=String.fromCharCode(ch); }
+        if(tag===0x9003) return {date:s};
+        if(!suelta) suelta=s;
+      }
+    }
+    return null;
+  };
+  let r=scan(ifd);
+  if(r && r.sub) r=scan(r.sub);
+  const str=(r&&r.date)||suelta;
+  if(!str) return null;
+  const m=str.match(/^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+  if(!m) return null;
+  const d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]);
+  return isNaN(d)?null:d;
+}
+
+/* HEIC: el iPhone guarda así por defecto. El EXIF vive dentro de una caja
+   'meta', localizada por 'iloc' y nombrada por 'iinf'. Sin esto, una foto
+   de iPhone entra sin fecha y acaba en el día de la copia. */
+async function exifDesdeHeic(file){
+  const cab=new Uint8Array(await file.slice(0, 256*1024).arrayBuffer());
+  const dv=new DataView(cab.buffer);
+  const tipo=p=>String.fromCharCode(cab[p+4],cab[p+5],cab[p+6],cab[p+7]);
+  const buscar=(ini,fin,nombre,saltar)=>{
+    let p=ini;
+    while(p+8<=fin){
+      let tam=dv.getUint32(p), cab2=8;
+      if(tam===1){ tam=Number(dv.getBigUint64(p+8)); cab2=16; }
+      if(tam===0) tam=fin-p;
+      if(tam<8) return null;
+      if(tipo(p)===nombre) return {ini:p+cab2+(saltar||0), fin:p+tam};
+      p+=tam;
+    }
+    return null;
+  };
+  const meta=buscar(0, cab.length, 'meta', 4);   // meta es FullBox: +4
+  if(!meta) return null;
+  const iinf=buscar(meta.ini, meta.fin, 'iinf', 0);
+  const iloc=buscar(meta.ini, meta.fin, 'iloc', 0);
+  if(!iinf || !iloc) return null;
+  /* qué item es el Exif */
+  let exifId=-1;
+  {
+    const v=dv.getUint8(iinf.ini);
+    let p=iinf.ini+4+(v===0?2:4);
+    while(p+8<=iinf.fin){
+      let tam=dv.getUint32(p);
+      if(tam<8) break;
+      if(tipo(p)==='infe'){
+        const ver=dv.getUint8(p+8);
+        let q=p+12;
+        const id = ver<3 ? dv.getUint16(q) : dv.getUint32(q);
+        q += ver<3 ? 2 : 4;
+        q += 2;                                   // protection index
+        if(String.fromCharCode(cab[q],cab[q+1],cab[q+2],cab[q+3])==='Exif'){ exifId=id; break; }
+      }
+      p+=tam;
+    }
+  }
+  if(exifId<0) return null;
+  /* dónde está ese item */
+  const ver=dv.getUint8(iloc.ini);
+  let p=iloc.ini+4;
+  const b1=dv.getUint8(p), b2=dv.getUint8(p+1); p+=2;
+  const tamOff=b1>>4, tamLen=b1&15, tamBase=b2>>4, tamIdx=b2&15;
+  const leer=(pos,n)=> n===4?dv.getUint32(pos) : n===8?Number(dv.getBigUint64(pos)) : n===2?dv.getUint16(pos) : 0;
+  const cuantos = ver<2 ? dv.getUint16(p) : dv.getUint32(p);
+  p += ver<2 ? 2 : 4;
+  for(let i=0;i<cuantos;i++){
+    const id = ver<2 ? dv.getUint16(p) : dv.getUint32(p);
+    p += ver<2 ? 2 : 4;
+    if(ver===1||ver===2) p+=2;                    // construction method
+    p+=2;                                         // data reference index
+    const base=leer(p,tamBase); p+=tamBase;
+    const extents=dv.getUint16(p); p+=2;
+    for(let j=0;j<extents;j++){
+      if(tamIdx && (ver===1||ver===2)) p+=tamIdx;
+      const off=leer(p,tamOff); p+=tamOff;
+      const len=leer(p,tamLen); p+=tamLen;
+      if(id===exifId){
+        const trozo=new Uint8Array(await file.slice(base+off, base+off+Math.min(len,65536)).arrayBuffer());
+        if(trozo.length<12) return null;
+        const tv=new DataView(trozo.buffer);
+        const salto=tv.getUint32(0);              // offset hasta la cabecera TIFF
+        return fechaDesdeTiff(tv, 4+salto);
+      }
+    }
+  }
+  return null;
+}
+
+/* Lee DateTimeOriginal del EXIF. Mira los bytes, no el tipo declarado: en
+   iOS el tipo llega vacío o raro más veces de las que parece. */
 async function exifDate(file){
   try{
-    if(!/jpe?g/i.test(file.type||'')) return null;
+    const magia=new Uint8Array(await file.slice(0,12).arrayBuffer());
+    const esJpeg = magia[0]===0xFF && magia[1]===0xD8;
+    const marca=String.fromCharCode(magia[4],magia[5],magia[6],magia[7]);
+    if(!esJpeg){
+      if(marca==='ftyp') return await exifDesdeHeic(file);
+      return null;
+    }
     const buf=await file.slice(0, 256*1024).arrayBuffer();
     const v=new DataView(buf);
-    if(v.getUint16(0)!==0xFFD8) return null;
     let off=2;
     while(off < v.byteLength-4){
       if(v.getUint8(off)!==0xFF) break;
       const marker=v.getUint8(off+1), size=v.getUint16(off+2);
-      if(marker===0xE1){
-        const start=off+4;
-        if(v.getUint32(start)===0x45786966){
-          const t=start+6;
-          const le = v.getUint16(t)===0x4949;
-          const g16=(p)=>v.getUint16(p,le), g32=(p)=>v.getUint32(p,le);
-          let ifd=t+g32(t+4);
-          const scan=(p)=>{
-            const n=g16(p);
-            for(let i=0;i<n;i++){
-              const e=p+2+i*12, tag=g16(e);
-              if(tag===0x8769) return {sub:t+g32(e+8)};
-              if(tag===0x9003||tag===0x0132||tag===0x9004){
-                const cnt=g32(e+4), vo=cnt>4? t+g32(e+8) : e+8;
-                let s='';
-                for(let j=0;j<Math.min(cnt,20);j++){ const ch=v.getUint8(vo+j); if(!ch)break; s+=String.fromCharCode(ch); }
-                if(tag===0x9003) return {date:s};
-                if(!scan._f) scan._f=s;
-              }
-            }
-            return null;
-          };
-          let r=scan(ifd);
-          if(r && r.sub) r=scan(r.sub);
-          const str=(r&&r.date)||scan._f;
-          if(str){
-            const m=str.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
-            if(m){ const d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]); if(!isNaN(d)) return d; }
-          }
-        }
+      if(marker===0xE1 && v.getUint32(off+4)===0x45786966){
+        const d=fechaDesdeTiff(v, off+10);        // salta "Exif\0\0"
+        if(d) return d;
       }
       if(marker===0xDA) break;
       off += 2 + size;
@@ -1517,6 +1611,9 @@ async function buildDetail(e, row){
       bits.push('<button class="again" data-thing="'+esc(m.thingId)+'">Es la '+others.length+'ª vez con '+esc(th?th.name:'esto')+' · verlas todas</button>');
     }
   }
+  const tanda=MOMENTS.filter(x=>x.datetime===m.datetime);
+  if(tanda.length>1) bits.push('<button class="again" data-act="fechar">'+
+    tanda.length+' momentos comparten esta fecha exacta · ponerles la suya</button>');
   bits.push('<div class="dactions">'+
       '<button data-act="edit">Editar</button>'+
       ((m.photos||[]).length>1?'<button data-act="split">Separar fotos</button>':'')+
@@ -1557,6 +1654,8 @@ async function buildDetail(e, row){
     }
     if(act==='del') confirmDelete(m);
     if(act==='split') separarFotos(m);
+    if(act==='fechar') openFechador(MOMENTS.filter(x=>x.datetime===m.datetime)
+      .sort((a,b)=>(a.title||'').localeCompare(b.title||'')));
   });
 
   /* Aquí había un gesto de "arrastra hacia abajo para cerrar". Lo quito: en
@@ -2546,6 +2645,60 @@ function openEditor(moment, isNew){
     const delBtn=$('#e-del',body);
     if(delBtn) delBtn.addEventListener('click',()=>{ saved=true; closeSheet(); confirmDelete(m); });
   }, {focus:isNew, onClose});
+}
+
+/* ------------------------------------------------------------------ *
+ * Fechar una tanda
+ *
+ * Las fotos que llegan sin fecha de captura comparten la del archivo, que
+ * en un cambio de móvil es el día de la copia. Si además fueron días
+ * distintos, moverlas en bloque no vale: hay que ir una a una. Al menos
+ * que sea en una sola pantalla, viendo la foto, y no abriendo doce veces
+ * el editor.
+ * ------------------------------------------------------------------ */
+const soloFecha = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+function openFechador(lista){
+  openSheet('Poner fechas', body=>{
+    body.innerHTML='<p class="sub" style="margin:0 0 14px">'+lista.length+
+      ' momentos comparten la misma fecha porque sus fotos llegaron sin fecha de captura. '+
+      'Cambia las que sepas; las que dejes igual se quedan como están.</p>'+
+      '<div id="fechas"></div>'+
+      '<button class="save" id="f-ok">Guardar fechas</button>';
+    const cont=$('#fechas',body);
+    lista.forEach(m=>{
+      const d=new Date(m.datetime);
+      const fila=document.createElement('div');
+      fila.className='ffila';
+      const ph=(m.photos||[])[0];
+      fila.innerHTML='<div class="fthumb"></div>'+
+        '<div class="fmain"><span class="ftit">'+esc(m.title||(m.photos||[]).length+' foto'+((m.photos||[]).length===1?'':'s'))+'</span>'+
+        '<input type="date" data-id="'+esc(m.id)+'" value="'+soloFecha(d)+'"></div>';
+      if(ph){
+        const img=document.createElement('img');
+        mediaURL(ph.thumbId||ph.id).then(u=>{ if(u) img.src=u; });
+        $('.fthumb',fila).appendChild(img);
+      }
+      cont.appendChild(fila);
+    });
+    $('#f-ok',body).addEventListener('click', async ()=>{
+      let tocados=0;
+      for(const inp of $$('#fechas input[type=date]',body)){
+        const m=MOMENTS.find(x=>x.id===inp.dataset.id);
+        if(!m) continue;
+        const vieja=new Date(m.datetime);
+        if(!inp.value || inp.value===soloFecha(vieja)) continue;
+        const p=inp.value.split('-');
+        const nueva=new Date(+p[0], +p[1]-1, +p[2], vieja.getHours(), vieja.getMinutes());
+        if(isNaN(nueva)) continue;
+        m.datetime=nueva.toISOString();
+        await guardarMomento(m);
+        tocados++;
+      }
+      closeSheet();
+      await refreshAll();
+      toast(tocados? tocados+' momento'+(tocados===1?'':'s')+' recolocado'+(tocados===1?'':'s') : 'No has cambiado ninguna fecha');
+    });
+  });
 }
 
 /* Deshacer un agrupado que no era: cada foto se va a su propio momento,
