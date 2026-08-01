@@ -10,6 +10,14 @@
   "scope": "./",
   "background_color": "#0B0D10",
   "theme_color": "#0B0D10",
+  "share_target": {
+    "action": "./compartir",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [{ "name": "fotos", "accept": ["image/*"] }]
+    }
+  },
   "icons": [
     { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "./icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },

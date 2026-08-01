@@ -65,6 +65,8 @@ Un **momento** es autocontenido: `id` (uuid), `datetime` ISO, `end` (solo viajes
 
 **Importar el carrete** — una tanda de fotos se convierte en momentos ya colocados en su fecha, agrupando por cercanía **solo cuando la fecha viene del EXIF**. Si no la hay, cada foto va suelta.
 
+**Compartir fotos *hacia* ttrNow (solo Android)** — Web Share Target: eliges fotos en tu galería, «Compartir» → ttrNow, y siguen el mismo camino que importar el carrete. Existe porque en Android (visto en un Samsung) el `<input multiple accept="image/*">` lanza el intent de documentos y la galería no responde a selección múltiple: no hay atributo del input que lo arregle. El `sw.js` recibe el POST en `./compartir`, deja las fotos en la caché `ttrnow-compartido` y la app las recoge al arrancar (`recogerCompartidas`). El multipart no transmite `lastModified`: sin EXIF, la foto compartida cae en hoy.
+
 **Arreglos posteriores** — «Separar fotos» (deshace un agrupado que no era) y «poner fechas» (pantalla con miniatura y selector para toda una tanda que comparte fecha).
 
 **Respaldo** — `.zip` abierto y documentado dentro del propio `data.json`, escrito y leído sin dependencias, **válido para `unzip`**. Compartir por la hoja del sistema o descargar. Aviso a los 30 días con el contador sin respaldar.
@@ -145,10 +147,14 @@ Sin decidir todavía: **poner el repo en privado**.
 - **Face ID** (WebAuthn). El PIN sí está probado.
 - El arreglo del **teclado** (`visualViewport`) al añadir personas.
 
+**Sin verificar en un Android de verdad:**
+
+- El **share target** (galería → compartir → ttrNow). El ciclo POST→caché→momentos está probado por CDP en escritorio, pero no el share sheet real. Ojo: tras desplegar, el WebAPK tarda en re-generarse (hasta ~1 día) o hay que reinstalar la app desde Chrome para que ttrNow aparezca al compartir. Si la instaló desde Samsung Internet, mejor reinstalar desde Chrome.
+
 **Limitaciones asumidas, no bugs:**
 
 - **Nada en segundo plano en iOS**: ni respaldo automático, ni notificaciones, ni recordatorios.
-- **No se puede compartir una foto *hacia* ttrNow** desde Fotos: el Share Target no existe en iOS.
+- **En iOS no se puede compartir una foto *hacia* ttrNow** desde Fotos: el Share Target no existe en iOS. En Android sí (véase §2).
 - **`navigator.storage.persist()` no se concede** siempre (Safari no lo implementa). De ahí que el aviso de respaldo importe.
 - Los datos **no están cifrados**. Cifrarlos de verdad rompería la búsqueda y el rendimiento; sería otra obra.
 - El **`.zip` del respaldo lleva el diario entero en claro**: no dejarlo en carpetas sincronizadas.

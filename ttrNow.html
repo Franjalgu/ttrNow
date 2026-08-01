@@ -2888,6 +2888,9 @@ async function openSettings(){
         : '<button class="save" id="s-exp">Exportar respaldo (.zip)</button>')+
       '<button class="ghostbtn" id="s-imp">Importar un respaldo</button>'+
       '<button class="ghostbtn" id="s-fotos">Crear momentos desde fotos</button>'+
+      (/Android/i.test(navigator.userAgent)
+        ? '<p class="sub" style="margin:2px 0 10px">Si al pulsar ahí tu móvil abre «Archivos» en vez de la galería, hazlo al revés: abre tu galería, elige las fotos y compártelas con ttrNow.</p>'
+        : '')+
       '<button class="ghostbtn" id="s-ent">Personas, lugares y etiquetas</button>'+
       '<button class="ghostbtn" id="s-lock">'+(bloqueoCfg?'Bloqueo: activado':'Poner un bloqueo al abrir')+'</button>'+
       (seeded?'<button class="ghostbtn" id="s-seed">Borrar los momentos de ejemplo</button>':'')+
@@ -2975,7 +2978,9 @@ async function borrarEntidad(tipo, id){
  * ------------------------------------------------------------------ */
 const HUECO_TANDA = 45*60*1000;
 function importarFotos(){
-  pickPhotos(async files=>{
+  pickPhotos(files=>crearDesdeFotos(files));
+}
+async function crearDesdeFotos(files){
     closeSheet();
     const total=files.length;
     let hechas=0;
@@ -3038,7 +3043,30 @@ function importarFotos(){
     toast(n+' momento'+(n===1?'':'s')+' desde '+total+' foto'+(total===1?'':'s')+
       (sinExif? ' · '+sinExif+' sin fecha de captura, van sueltas':'')+
       '. Ponles título cuando quieras', 6000);
-  });
+}
+
+/* Fotos compartidas desde la galería del móvil (Android). El service worker
+   las deja en una caché aparte; aquí se recogen y siguen el mismo camino
+   que «crear momentos desde fotos». */
+async function recogerCompartidas(){
+  if(!('caches' in window)) return;
+  try{
+    if(location.search.indexOf('compartidas=1')>=0)
+      history.replaceState(null,'',location.pathname);
+    if(!(await caches.has('ttrnow-compartido'))) return;
+    const c=await caches.open('ttrnow-compartido');
+    const files=[];
+    for(const k of await c.keys()){
+      const res=await c.match(k);
+      if(!res) continue;
+      const blob=await res.blob();
+      const nombre=decodeURIComponent(res.headers.get('X-Nombre')||'')||'foto.jpg';
+      const mod=parseInt(res.headers.get('X-Modificada')||'0',10);
+      files.push(new File([blob], nombre, {type:blob.type||'image/jpeg', lastModified:mod||Date.now()}));
+    }
+    await caches.delete('ttrnow-compartido');
+    if(files.length) await crearDesdeFotos(files);
+  }catch(e){}
 }
 
 function openEntities(){
@@ -3597,6 +3625,7 @@ async function init(){
   setYear(new Date().getFullYear());
   updateHead();
   setupPWA();
+  recogerCompartidas();
   window.addEventListener('beforeunload',()=>{ for(const [id,e] of URLS) URL.revokeObjectURL(e.url); });
 }
 init();
